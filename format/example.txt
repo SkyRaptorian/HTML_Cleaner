@@ -1,0 +1,4 @@
+TITLE:Example | Book I
+CHAP:Chapter {}
+LINEBREAK:###
+STYLE:h1:chapHeading.body:chapter.
