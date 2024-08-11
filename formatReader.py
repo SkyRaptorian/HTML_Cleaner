@@ -15,9 +15,9 @@ def readFormat(file) -> book:
                 chapter = line[boundary+1:]
             case "LINEBREAK":
                 hasLBSymbol = True
-                print("Found Linebreak")
+                #print("Found Linebreak")
                 linebreak = line[boundary+1:len(line)-1]
-                print(linebreak)
+                #print(linebreak)
             case "STYLE":
                 hasStyle = True
                 style = {}
