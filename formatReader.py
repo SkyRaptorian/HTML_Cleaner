@@ -11,8 +11,7 @@ def readFormat(file) -> book:
     format_dict = json.load(file)
 
     #check file version
-    #if different fail out and end program
-    #TODO:
+    #if different warn user and attempt to continue
     new_book = book.book(format_dict["version"]) #Create new book
 
     # BUILD BOOK FORMAT ###################################################################################

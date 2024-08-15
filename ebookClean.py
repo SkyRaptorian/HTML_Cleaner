@@ -56,7 +56,8 @@ if os.path.exists(format_path):
   #Open file
   format_file = open(format_path, 'r')
   #Create book information file
-  thisBook = readFormat(format_file)
+  thisBook = book(0, format_file)
+  #thisBook = book.readFormat()
 
   #Close file
   format_file.close()
@@ -64,6 +65,8 @@ else:
   #No format provided - exit
   print("Error: Format does not exist")
   exit()
+
+print(thisBook) 
 
 # CREATING THE CLEANED FILES #################################################################################
 
