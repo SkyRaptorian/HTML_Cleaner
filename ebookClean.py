@@ -47,14 +47,14 @@ chapter_path = "{}/{}.html".format(chapter_folder, chapter_name)  #The path of a
 #print(chapter_path)
 final_path = "{}/{}.xhtml".format(final_folder, final_name)       #The path of the final file
 #print(final_path)
-format_path = "format/{}.txt".format(format_name)                 #The path of the format file
+format_path = "format/{}.json".format(format_name)                 #The path of the format file
 #print(format_path)
 
 # FORMAT SETUP -----------------------------------------------------------------------------------------------
 #Check if the book format file exists
 if os.path.exists(format_path):
   #Open file
-  format_file = open(format_path)
+  format_file = open(format_path, 'r')
   #Create book information file
   thisBook = readFormat(format_file)
 
@@ -65,13 +65,16 @@ else:
   print("Error: Format does not exist")
   exit()
 
-# MAIN LOOP --------------------------------------------------------------------------------------------------
+# CREATING THE CLEANED FILES #################################################################################
 
+# MAIN LOOP --------------------------------------------------------------------------------------------------
 #Loop for main chapter files. Continue until an existing file cannot be found.
 while os.path.exists(chapter_path.format(chapter_count)):
 
   #Open the chapter file
   file = open(chapter_path.format(chapter_count))
+  
+
   #Create the soup for parsing
   soup = BeautifulSoup(file, 'html.parser')
 
@@ -86,6 +89,8 @@ while os.path.exists(chapter_path.format(chapter_count)):
   #Close files
   file.close()
   output.close()
+
+  print("COMPLETED: " + final_path.format(chapter_count))
 
   chapter_count += 1 #increment chapter count
 
@@ -108,8 +113,11 @@ for file_name in additional_files:
     #Create output files
     output = open(additional_final, "w")
     soup.encode(formatter="html") #encode to html
+
     output.write(str(soup)) #Write to file
 
     #Close files
     file.close()
     output.close()
+
+    print("COMPLETED: " + additional_final)
