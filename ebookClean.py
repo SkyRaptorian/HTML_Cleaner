@@ -8,7 +8,6 @@ from bs4 import Comment
 # Custom classes
 from htmlManager import cleanHTML
 from book import book
-from formatReader import readFormat
 
 import os.path
 import re
