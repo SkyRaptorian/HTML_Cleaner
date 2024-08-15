@@ -1,0 +1,12 @@
+{
+    "version": 0,
+    
+    "title": "Example",
+    "chapter_format": "Chapter {}",
+    "sectionbreak_symbol": "###",
+
+    "style_rules": {
+        "h1": "chapHeading",
+        "body": "chapter"
+    }
+}

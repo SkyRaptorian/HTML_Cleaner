@@ -14,7 +14,7 @@ def cleanHTML(soup, book, count):
 
     # MANAGE HTML HEAD --------------------------------------------------------------------------------------
     #MANAGE HEAD TAGS
-    soup.title.string = book.bookName + " | " + book.chapterName.format(count) #Populate <title> tags
+    soup.title.string = book.book_title + " | " + book.chapter_format.format(count) #Populate <title> tags
 
     #REMOVE LibreOffice META TAGS
     soup.find("meta", attrs={"name" : "generator"}).decompose()
@@ -44,10 +44,10 @@ def cleanHTML(soup, book, count):
     # HTML STYLING FROM DICTIONARY #########################################################################
     #START STYLES FROM FORMAT DICTIONARY
     #add dictionary styles
-    for tag_type in book.styling: 
+    for tag_type in book.style_dict: 
         #configure tags to be searchable, change style class, clear all attributes.
         for styled_tag in soup.find_all(tag_type):
-            styled_tag["class"] = book.styling[tag_type]
+            styled_tag["class"] = book.style_dict[tag_type]
 
     #replace em tags - LibreOffice Html Writer tags italics with <em>. If this behaviour is desired comment out.
     #for data in soup.find_all("em"):
@@ -60,7 +60,7 @@ def cleanHTML(soup, book, count):
 
     # ADD SECTION BREAKS
     # MUST BE HR FOR ACCESSABILITY - ANY IMAGES MUST BE DONE IN CSS AS BACKGROUND IMAGE
-    for l in soup.find_all("p", string=book.linebreakSymbol):
+    for l in soup.find_all("p", string=book.section_break_symbol):
         #Create hr tag
         linebreak_tag = soup.new_tag("hr")
         #add css file

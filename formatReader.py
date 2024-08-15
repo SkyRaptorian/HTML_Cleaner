@@ -1,55 +1,38 @@
-import book
+#A class to read a json file and retrive the formatting rules of the book
 
+import json #The JSON parser for python
+
+import book #custom class
+
+#Take a json file with defined formats and return a book object with those settings stored
 def readFormat(file) -> book:
-    hasStyle = False
-    hasLBSymbol = False
+    # SET UP ###############################################################################################
+    #Parse from JSON:
+    format_dict = json.load(file)
 
-    for line in file:
-        boundary = line.find(":")
-        word = line[:boundary]
+    #check file version
+    #if different fail out and end program
+    #TODO:
+    new_book = book.book(format_dict["version"]) #Create new book
 
-        match word:
-            case "TITLE":
-                title = line[boundary+1:]
-            case "CHAP":
-                chapter = line[boundary+1:]
-            case "LINEBREAK":
-                hasLBSymbol = True
-                #print("Found Linebreak")
-                linebreak = line[boundary+1:len(line)-1]
-                #print(linebreak)
-            case "STYLE":
-                hasStyle = True
-                style = {}
-
-                workingDict = line[boundary+1:] #collect everypart of the string without STYLE:
-                #startDict = workingDict.find("(") #find the start of the brackets
-                #endDict = workingDict.find(")") #find the end of the brackets
-                nextTerm = workingDict.find(":") #tags are seperated by : find the next one until it runs out.
-                nextSpace = workingDict.find(".")
-
-                while nextTerm != -1: #loop until no more tags
-                    tag = workingDict[:nextTerm]
-                    rule = workingDict[nextTerm+1:nextSpace]
-
-                    workingDict = workingDict[nextSpace+1:]
-                    nextTerm = workingDict.find(":")
-                    nextSpace = workingDict.find(".")
-
-                    style[tag] = rule
-                    #print(style)
+    # BUILD BOOK FORMAT ###################################################################################
     
-    #Create book based off read in data
-    if hasStyle:
-        if hasLBSymbol:
-            abook = book.book(title, chapter, linebreak, style)
-            return abook
-        else:
-            abook = book.book(title, chapter, style)
-            return abook
-    elif hasLBSymbol:
-        abook = book.book(title, chapter, linebreak)
-        return abook
-    else:
-        abook = book.book(title, chapter)
-        return abook
+    # GET FILE TYPE
+    #TODO:
+
+    # BASIC INFO ------------------------------------------------------------------------------------------
+    new_book.book_title = format_dict["title"]
+    new_book.chapter_format = format_dict["chapter_format"]
+
+    #SECTION BREAK ----------------------------------------------------------------------------------------
+    if "sectionbreak_symbol" in format_dict:
+        new_book.section_break_symbol = format_dict["sectionbreak_symbol"]
+        new_book.need_section_break_replace = True
+    
+    #STYLES -----------------------------------------------------------------------------------------------
+    if "style_rules" in format_dict:
+        new_book.style_dict = format_dict["style_rules"]
+        new_book.need_styling = True
+    
+    print(new_book)
+    return new_book
