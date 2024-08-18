@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 from bs4 import Comment
 
 # Custom classes
-from htmlManager import cleanHTML
+from htmlManager import clean_html_libreOffice
 from book import book
 
 import os.path
@@ -80,7 +80,7 @@ while os.path.exists(chapter_path.format(chapter_count)):
   soup = BeautifulSoup(file, 'html.parser')
 
   #Clean HTML
-  cleanHTML(soup, thisBook, chapter_count)
+  clean_html_libreOffice(soup, thisBook, chapter_count)
 
   #Create output files
   output = open(final_path.format(chapter_count), "w")
@@ -109,7 +109,7 @@ for file_name in thisBook.additional_files:
     soup = BeautifulSoup(file, 'html.parser')
 
     #Clean HTML
-    cleanHTML(soup, thisBook, "ADDITIONAL")
+    clean_html_libreOffice(soup, thisBook, "ADDITIONAL")
 
     #Create output files
     output = open(additional_final, "w")

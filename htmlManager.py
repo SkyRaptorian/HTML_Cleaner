@@ -3,7 +3,7 @@ from bs4 import Comment
 
 import re #Needed for string searches
 
-def cleanHTML(soup, book, count):
+def clean_html_libreOffice(soup, book, count):
 
     # INITIAL HTML SET UP ###################################################################################
     # NAMESPACES --------------------------------------------------------------------------------------------
