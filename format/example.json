@@ -5,8 +5,8 @@
     "origin_folder": "..",
     "chapter_files": "Chapter {}",
     "additional_files": {
-        "Prologue": {"placement": 0, "title": "Prologue", "final_name": "prologue"},
-        "Epilogue": {"placement": 46, "title": "Epilogue", "final_name": "epilogue"}
+        "Prologue": {"title": "Prologue", "final_name": "prologue"},
+        "Epilogue": {"title": "Epilogue", "final_name": "epilogue"}
     },
     
     "title": "Example",
