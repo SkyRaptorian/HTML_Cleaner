@@ -25,8 +25,6 @@ final_folder = "final"
 #The name format for the final cleaned files ".xhtml" is implied
 final_name = "{}-chapter" 
 
-additional_files = {"Epilogue":"epilogue"}
-
 # CMD LINE ARGS -----------------------------------------------------------------------------------------------
 cmd_parser = argparse.ArgumentParser() #Create cmd line parser
 
@@ -35,7 +33,7 @@ cmd_parser.add_argument("format", help="The name of the format file to be used. 
 
 cmd_args = cmd_parser.parse_args() #Get data from cmd line
 
-format_name = "example" #name of the format file to be loaded
+format_name = cmd_args.format #name of the format file to be loaded
 
 # PROGRAM SET UP #############################################################################################
 
@@ -98,10 +96,10 @@ while os.path.exists(chapter_path.format(chapter_count)):
   chapter_count += 1 #increment chapter count
 
 #Loop through all additional files provided
-for file_name in additional_files:
+for file_name in thisBook.additional_files:
   #Create path for additional files
   additional_path = "{}/{}.html".format(thisBook.origin_folder, file_name)
-  additional_final = "{}/{}.xhtml".format(final_folder, additional_files[file_name])
+  additional_final = "{}/{}.xhtml".format(final_folder, thisBook.additional_files[file_name]["final_name"])
   #Check if the file exists otherwise skip
   if os.path.exists(additional_path):
 
