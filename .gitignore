@@ -158,5 +158,5 @@ cython_debug/
 test.py
 
 #Ignore any other format files
-format/*
+format/*.json
 !format/example.json
