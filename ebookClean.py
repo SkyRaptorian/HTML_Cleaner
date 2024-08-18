@@ -91,7 +91,7 @@ while os.path.exists(chapter_path.format(chapter_count)):
   file.close()
   output.close()
 
-  print("COMPLETED: " + final_path.format(chapter_count))
+  print("COMPLETED: " + final_path.format(chapter_count), end='\r')
 
   chapter_count += 1 #increment chapter count
 
@@ -121,4 +121,7 @@ for file_name in thisBook.additional_files:
     file.close()
     output.close()
 
-    print("COMPLETED: " + additional_final)
+    print("COMPLETED: " + additional_final + "            ", end='\r')
+
+#PRINT SHOW END OF PROJECT - WHITESPACE TO CLEAR PREVIOUS LETTERS
+print("ALL COMPLETE                                   ")
