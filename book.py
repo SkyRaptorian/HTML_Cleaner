@@ -7,8 +7,16 @@ import json #The JSON parser for python
 
 class book:
     # CLASS VARIABLES #########################################################################
+    #Technically not needed at the start for python, but easier to see here
     version = 0 #The version in order to check for compatability issues, int
     type = "LibreOffice" #Where the html files where generated, LibreOffice as defualt, String
+
+    origin_folder = ".." #The origin folder with all the chapter files
+    chapter_file_name =  "Chapter {}" #The naming convention of the chapter files
+    #Dictionary of any additional chapter files that do not fit the standard chapter conventions in chapter_name
+    #format: {file name: final file name}
+    #folders are the same as defined of chapter_path and final_path
+    additional_files =  {} #Dictionary of any additional files and their details
 
     book_title = "" #The title of the book, String
     chapter_format = "{}" #The format of the chapter numbering, String
@@ -32,12 +40,18 @@ class book:
 
         #check file version
         #if different warn user and attempt to continue
-        #TODO:
+        if format_dict["version"] != self.version:
+            print("The JSON file has a different version then the program provided.\nAttempting to continue... problems may occur.\n")
 
         # BUILD BOOK FORMAT --------------------------------------------------------------------
     
         # GET FILE TYPE
-        #TODO:
+        self.type = format_dict["file_type"]
+
+        # GET FILE PATHS
+        self.origin_folder = format_dict["origin_folder"]
+        self.chapter_file_name =  format_dict["chapter_files"]
+        self.additional_files =  format_dict["additional_files"]
 
         # BASIC INFO ---------------------------------------------------------------------------
         self.book_title = format_dict["title"]
@@ -61,11 +75,14 @@ class book:
         output = "Book File:\n"
         output += "\tVersion: " + str(self.version) + "\n" 
         output += "\tType: " + self.type + "\n\n" 
+        output += "\tOrigin Folder: " + self.origin_folder + "\n"
+        output += "\tChapter File Name: " + self.chapter_file_name + "\n"
+        output += "\tAdditional Files: " + str(self.additional_files) + "\n"
         output += "\tBook Title: " + self.book_title + "\n" 
         output += "\tChapter Format: " + self.chapter_format + "\n" 
         output += "\tSection Break:\n"
         output += "\t\tSymbol: " + self.section_break_symbol + "\n"
-        output += "\t\tScan?: " + str(self.need_section_break_replace) + "\n\n"
+        output += "\t\tScan?: " + str(self.need_section_break_replace) + "\n"
         output += "\tStyles:\n"
         output += "\t\t" + str(self.style_dict) + "\n"
         output += "\t\tAdd Styles?: " + str(self.need_styling) + "\n"

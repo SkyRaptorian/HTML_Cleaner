@@ -17,18 +17,11 @@ import re
 # CHAPTER CONFIGIRATION --------------------------------------------------------------------------------------
 chapter_count = 1 #The number of the starting chapter
 
-#The folder of the uncleaned html files
-chapter_folder = ".."
-#The form of the chapter names - ".html" is implied
-chapter_name = "Chapter {}"
 #The destination of the finished files. 
 final_folder = "final" 
 #The name format for the final cleaned files ".xhtml" is implied
-final_name = "chapter-{}" 
+final_name = "{}-chapter" 
 
-#Dictionary of any additional chapter files that do not fit the standard chapter conventions in chapter_name
-#format: {file name: final file name}
-#folders are the same as defined of chapter_path and final_path
 additional_files = {"Epilogue":"epilogue"}
 
 # OTHER PATHS ------------------------------------------------------------------------------------------------
@@ -42,8 +35,6 @@ format_name = "example"
 #TODO: Add command line arguments
 
 # BUILD PATHS ------------------------------------------------------------------------------------------------
-chapter_path = "{}/{}.html".format(chapter_folder, chapter_name)  #The path of a chapter file
-#print(chapter_path)
 final_path = "{}/{}.xhtml".format(final_folder, final_name)       #The path of the final file
 #print(final_path)
 format_path = "format/{}.json".format(format_name)                 #The path of the format file
@@ -56,16 +47,18 @@ if os.path.exists(format_path):
   format_file = open(format_path, 'r')
   #Create book information file
   thisBook = book(0, format_file)
-  #thisBook = book.readFormat()
 
   #Close file
   format_file.close()
+
+  chapter_path = "{}/{}.html".format(thisBook.origin_folder, thisBook.chapter_file_name)  #The path of a chapter file
+  #print(chapter_path)
 else:
   #No format provided - exit
   print("Error: Format does not exist")
   exit()
 
-print(thisBook) 
+print(thisBook)
 
 # CREATING THE CLEANED FILES #################################################################################
 
@@ -99,7 +92,7 @@ while os.path.exists(chapter_path.format(chapter_count)):
 #Loop through all additional files provided
 for file_name in additional_files:
   #Create path for additional files
-  additional_path = "{}/{}.html".format(chapter_folder, file_name)
+  additional_path = "{}/{}.html".format(thisBook.origin_folder, file_name)
   additional_final = "{}/{}.xhtml".format(final_folder, additional_files[file_name])
   #Check if the file exists otherwise skip
   if os.path.exists(additional_path):

@@ -1,5 +1,13 @@
 {
     "version": 0,
+    "file_type": "LibreOffice",
+
+    "origin_folder": "..",
+    "chapter_files": "Chapter {}",
+    "additional_files": {
+        "Prologue": {"placement": 0, "title": "Prologue", "final_name": "prologue"},
+        "Epilogue": {"placement": 46, "title": "Epilogue", "final_name": "epilogue"}
+    },
     
     "title": "Example",
     "chapter_format": "Chapter {}",
