@@ -3,20 +3,25 @@ from bs4 import Comment
 
 import re #Needed for string searches
 
-#Namespace dictionary xmlns:epub=
+#Namespace dictionary, Manages all namespaces for consistency
 namespace_dict = {
     "xmlns": "http://www.w3.org/1999/xhtml",
     "xmlns:epub": "http://www.idpf.org/2007/ops"
 }
+
+#ARGUMENT SPACE
+#vars that cover cmd line arguments to take in top level
+
+NO_LINKS = False
 
 def clean_html_libreOffice(soup, book, count):
 
     # INITIAL HTML SET UP ###################################################################################
     # NAMESPACES --------------------------------------------------------------------------------------------
     #ADD XHTML NAMESPACE
-    soup.html["xmlns"] = "http://www.w3.org/1999/xhtml"
+    soup.html["xmlns"] = namespace_dict["xmlns"]
     #ADD EPUB TYPE NAME SPACE
-    #TODO: epub:type stuff
+    soup.html["xmlns:epub"] = namespace_dict["xmlns:epub"]
 
     # MANAGE HTML HEAD --------------------------------------------------------------------------------------
     #MANAGE HEAD TAGS
@@ -96,36 +101,10 @@ def clean_html_ao3(main_soup, format_book):
     """
     # CREATE FILES ##########################################################################################
     # CREATE FOREWORD/PREFACE -------------------------------------------------------------------------------
-    soup = create_base_xhtml()
-    soup.body.append(soup.new_tag("section")) #Add section
-
-    #ADD ACCESSABILITY ROLES
-    soup.body.section["epub:type"] = "preface"
-    soup.body.section["role"] = "doc-preface"
+    soup = build_preface(main_soup, "ao3")
 
     #The tag that all the work will be done in. The "Working directory"
     working_tag = soup.body.section
-
-    #Create Preface Skeleton
-    #Add Heading
-    working_tag.append(soup.new_tag("h1", attrs={"class":"ficTitle"}))
-    #Add bylines
-    working_tag.append(soup.new_tag("p", attrs={"class":"byline"}))
-    working_tag.append(soup.new_tag("p", attrs={"class":"message"}))
-
-
-    #Search First Preface Paragraph
-    search_contents = main_soup.find("div", id="preface").find("p").contents
-    #Add fic title
-    working_tag.h1.string = search_contents[1].string
-
-    #Posted Orginally byline
-    working_tag.find("p", class_="message").string = search_contents[3]
-    working_tag.find("p", class_="message").string.insert_after(search_contents[4])
-
-    #Add author byline
-    working_tag.find("p", class_="byline").string = "by "
-    working_tag.find("p", class_="byline").string.insert_after(main_soup.find("div", class_="byline").a)
 
     #Create details/tags description list
     working_tag.append(soup.new_tag("div", attrs={"class":"meta"}))
@@ -174,12 +153,9 @@ def clean_html_ao3(main_soup, format_book):
 
     #loop through all chpater contets
     for chapter_text in chapter_contents:
-        soup = create_base_xhtml()
-        soup.body.append(soup.new_tag("section")) #Add section
-
-        #ADD ACCESSABILITY ROLES
-        soup.body.section["epub:type"] = "chapter"
-        soup.body.section["role"] = "doc-chapter"
+        #CREATE BASIC FILE
+        epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
+        soup = create_base_xhtml(epub_roles, "Chapter") #Placeholder title until later search
 
         #ADD CSS
         soup.body.section["class"] = "ficText"
@@ -251,19 +227,13 @@ def clean_html_ao3(main_soup, format_book):
         soup_to_file(soup, "final/test" + str(chapter_count) + ".xhtml")
         chapter_count += 1
     
-    #AFTERWORD
+    #AFTERWORD ------------------------------------------------------------------------------------------------
     if (main_soup.find("div", id="afterword").find("div", id="endnotes")):
         working_search = main_soup.find("div", id="afterword").find("div", id="endnotes")
 
-        soup = create_base_xhtml()
-        soup.body.append(soup.new_tag("section")) #Add section
-
-        #ADD ACCESSABILITY ROLES
-        soup.body.section["epub:type"] = "afterword"
-        soup.body.section["role"] = "doc-afterword"
-
-        #ADD TITLE
-        soup.find("title").string = "Afterword"
+        #CREATE BASIC FILE
+        epub_roles = {"epub:type": "afterword", "role": "doc-afterword"}
+        soup = create_base_xhtml(epub_roles, "Afterword")
 
         #ADD CONTENT
         soup.find("section").append(soup.new_tag("h1"))
@@ -274,15 +244,57 @@ def clean_html_ao3(main_soup, format_book):
 
         soup_to_file(soup, "final/afterword.xhtml")
         
+#############################################################################################################
+###### FILE PART MANAGEMENT FUNCTIONS #######################################################################
+#############################################################################################################
 
-    
+#Pulls a preface from a soup
+def build_preface(file_soup, formatype) -> BeautifulSoup:
+    """
+    ARGS:
+    file_soup: BeautifulSoup
+        Soup made from file. The file to be cleaned
+    type: String
+        The type of file (where the file was generated). Controls logic paths for clean up.
+        NOT IMPLEMENTED: ASSUMES ao3
+    """
+    #BUILD SKELETON FILE -------------------------------------------------------------------------------------
+    epub_roles = {"epub:type": "preface", "role": "doc-preface"}
+    soup = create_base_xhtml(epub_roles, "Preface") #Basic File
+
+    soup.section.append(soup.new_tag("h1", attrs={"class":"title"})) #Heading
+    soup.section.append(soup.new_tag("p", attrs={"class":"byline"})) #Author byline
+    soup.section.append(soup.new_tag("p", attrs={"class":"link"})) #Archive of Our Own link
+
+    #ENTER BASIC DETAILS ------------------------------------------------------------------------------------
+    # HEADING
+    soup.find("h1").string = file_soup.find("h1").string 
+
+    # AUTHOR
+    soup.find("p", class_="byline").string = "by " #Start string
+    soup.find("p", class_="byline").append(set_link(file_soup.find("div", class_="byline").a)) #Append author name to byline after checking links
+
+    # WORK LINK
+    work_link = file_soup.find("p", class_="message").find_all("a")
+    soup.find("p", class_="link").string = "Posted originally on the " #Start the link line
+    soup.find("p", class_="link").append(set_link(work_link[0])) #Add first link - Archive of Our Own
+    soup.find("p", class_="link").append(" at ") #bridge links
+    soup.find("p", class_="link").append(set_link(work_link[1])) #Add specific work link
+    soup.find("p", class_="link").append(".") #end line
+
+    # CREATE TAG DESCRIPTION LIST ---------------------------------------------------------------------------
+
+    return soup
+
 
 #############################################################################################################
 ###### HELPER FUNCTIONS #####################################################################################
 #############################################################################################################
 
-def create_base_xhtml() -> BeautifulSoup:
-    #CREATE NEW XHTML FILE
+def create_base_xhtml(epub_roles, title) -> BeautifulSoup:
+    #Creates an empty soup with the basic skeleton of a xhtml file created
+
+    #CREATE NEW XHTML FILE ##################################################################################
     soup = BeautifulSoup("<!DOCTYPE html>", "html.parser")
 
     #CREATE SHELL -----------------------------------------------------
@@ -295,16 +307,34 @@ def create_base_xhtml() -> BeautifulSoup:
     soup.html.head.append(soup.new_tag("meta")) #Create meta tag
     soup.html.head.meta["charset"] = "utf-8"
 
-    soup.html.head.append(soup.new_tag("title")) #CReate title tag, leave empty
+    soup.html.head.append(soup.new_tag("title")) #Create title tag, leave empty
+    soup.find("title").string = title
 
-    soup.html.head.append(soup.new_tag("link", attrs={"rel":"stylesheet", "type":"text/css", "href":"../styles.css"}))
+    soup.html.head.append(soup.new_tag("link", attrs={"rel":"stylesheet", "type":"text/css", "href":"styles.css"}))
 
     # CREATE BODY -----------------------------------------------------
     soup.html.append(soup.new_tag("body")) #Create body tag
+    soup.body.append(soup.new_tag("section")) #Create section tag, needed for accessability roles
+    #ADD ACCESSABILITY ROLES
+    soup.body.section["epub:type"] = epub_roles["epub:type"]
+    soup.body.section["role"] = epub_roles["role"]
 
     return soup
 
 def soup_to_file(soup, file_name):
-    output = open(file_name, "w")
+    #A function to save the soup to a file
+    output = open(file_name, "w") #Create file
     soup.encode(formatter="html") #encode to html
     output.write(str(soup)) #Write to file
+
+#return link based off of NO_LINKS rule
+# if True replace a href tag with <i>
+def set_link(tag):
+    if (NO_LINKS):
+        soup = BeautifulSoup("", "html.parser") #Create a soup
+        string_data = tag.string #Get old tag string
+        new_tag = soup.new_tag("i") #Create new <i> tag
+        new_tag.string = string_data #give string to new tag
+        return new_tag #return new <i> tag
+    else:
+        return tag #If NO_LINKS false - no changes needed
