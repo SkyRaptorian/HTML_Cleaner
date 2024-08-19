@@ -105,18 +105,6 @@ def clean_html_ao3(main_soup, format_book):
 
     #The tag that all the work will be done in. The "Working directory"
     working_tag = soup.body.section
-
-    #Create details/tags description list
-    working_tag.append(soup.new_tag("div", attrs={"class":"meta"}))
-    working_tag.div.append(soup.new_tag("dl"))
-
-    #get dl from original file
-    search_contents = main_soup.find("dl")
-    for element in search_contents.children:
-        if (element.name == "dt"):
-            working_tag.div.dl.append(element)
-        if (element.name == "dd"):
-            working_tag.div.dl.append(element)
     
     #Find preface summary and notes
     search_contents = main_soup.find("div", id="preface").find_all("blockquote")
@@ -266,6 +254,9 @@ def build_preface(file_soup, formatype) -> BeautifulSoup:
     soup.section.append(soup.new_tag("p", attrs={"class":"byline"})) #Author byline
     soup.section.append(soup.new_tag("p", attrs={"class":"link"})) #Archive of Our Own link
 
+    soup.section.append(soup.new_tag("div", attrs={"class":"work-tags"})) #Div for work tags
+    soup.div.append(soup.new_tag("dl")) #Start description list
+
     #ENTER BASIC DETAILS ------------------------------------------------------------------------------------
     # HEADING
     soup.find("h1").string = file_soup.find("h1").string 
@@ -282,7 +273,14 @@ def build_preface(file_soup, formatype) -> BeautifulSoup:
     soup.find("p", class_="link").append(set_link(work_link[1])) #Add specific work link
     soup.find("p", class_="link").append(".") #end line
 
-    # CREATE TAG DESCRIPTION LIST ---------------------------------------------------------------------------
+    # TAG LIST --------------------------------------------------------------------------------------------
+    for tag in file_soup.dl: #Get all description elements
+        if (tag.name == "dt"): #If description element title
+            soup.dl.append(tag)
+        if (tag.name == "dd"): #If description element decription
+            for a in tag.find_all("a"):
+                old_tag = a.replace_with(set_link(a)) #Check all links in dd
+            soup.dl.append(tag)
 
     return soup
 
