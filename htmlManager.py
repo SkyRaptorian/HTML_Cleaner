@@ -100,38 +100,9 @@ def clean_html_ao3(main_soup, format_book):
         format_book: the book class that holds the information of the book and format data
     """
     # CREATE FILES ##########################################################################################
-    # CREATE FOREWORD/PREFACE -------------------------------------------------------------------------------
+    # CREATE FOREWORD/PREFACE
     soup = build_preface(main_soup, "ao3")
-
-    #The tag that all the work will be done in. The "Working directory"
-    working_tag = soup.body.section
-    
-    #Find preface summary and notes
-    search_contents = main_soup.find("div", id="preface").find_all("blockquote")
-
-    #ADD SUMMARY
-    working_tag.append(soup.new_tag("div", attrs={"class":"summary"}))
-    #Create heading
-    working_tag.find("div", class_="summary").append("h2")
-    working_tag.find("div", class_="summary").string = "Summary"
-    #Create block quote
-    working_tag.find("div", class_="summary").append(soup.new_tag("blockquote"))
-    for element in search_contents[0]:
-        working_tag.find("div", class_="summary").blockquote.append(element)
-    
-    #print(main_soup.find("div", id="preface").find("p", string="Notes"))
-    #Check if there are notes
-    if main_soup.find("div", id="preface").find_all("p", string="Notes"):
-        #ADD WORK NOTES
-        working_tag.append(soup.new_tag("div", attrs={"class":"notes"}))
-        working_tag.find("div", class_="notes").append("h2")
-        working_tag.find("div", class_="notes").string = "Notes"
-        #Create block quote
-        working_tag.find("div", class_="notes").append(soup.new_tag("blockquote"))
-        for element in search_contents[1]:
-            working_tag.find("div", class_="notes").blockquote.append(element)
-
-    soup_to_file(soup, "test.html")
+    soup_to_file(soup, "final/preface.xhtml")
 
     #START CHAPTERS -----------------------------------------------------------------------------------------
     working_search = main_soup.find("div", id="chapters") #The chapter area of the main file
@@ -257,9 +228,11 @@ def build_preface(file_soup, formatype) -> BeautifulSoup:
     soup.section.append(soup.new_tag("div", attrs={"class":"work-tags"})) #Div for work tags
     soup.div.append(soup.new_tag("dl")) #Start description list
 
+    soup.section.append(soup.new_tag("div", attrs={"class":"summary"})) #Div for work summary
+
     #ENTER BASIC DETAILS ------------------------------------------------------------------------------------
     # HEADING
-    soup.find("h1").string = file_soup.find("h1").string 
+    soup.h1.string = file_soup.find("h1").string 
 
     # AUTHOR
     soup.find("p", class_="byline").string = "by " #Start string
@@ -281,7 +254,19 @@ def build_preface(file_soup, formatype) -> BeautifulSoup:
             for a in tag.find_all("a"):
                 old_tag = a.replace_with(set_link(a)) #Check all links in dd
             soup.dl.append(tag)
+    
+    # SUMMARY AND NOTES ----------------------------------------------------------------------------------
+    # SUMMARY, ALL WORKS HAVE ONE
+    summary_text = file_soup.find("div", id="preface").find("p", string="Summary").find_next_sibling() #Get the summary blocktext
+    create_summary("Summary", summary_text, soup.find("div", class_="summary"))
 
+    # NOTES, NEED TO CHECK FIRST
+    notes_text = file_soup.find("div", id="preface").find("p", string="Notes").find_next_sibling() #Get the notes blocktext
+
+    if (notes_text): #Check there is a note
+        soup.section.append(soup.new_tag("div", attrs={"class":"notes"})) #create div for work notes
+        create_summary("Notes", notes_text, soup.find("div", class_="notes")) #MAke the note text
+    
     return soup
 
 
@@ -308,7 +293,7 @@ def create_base_xhtml(epub_roles, title) -> BeautifulSoup:
     soup.html.head.append(soup.new_tag("title")) #Create title tag, leave empty
     soup.find("title").string = title
 
-    soup.html.head.append(soup.new_tag("link", attrs={"rel":"stylesheet", "type":"text/css", "href":"styles.css"}))
+    soup.html.head.append(soup.new_tag("link", attrs={"rel":"stylesheet", "type":"text/css", "href":"../styles.css"}))
 
     # CREATE BODY -----------------------------------------------------
     soup.html.append(soup.new_tag("body")) #Create body tag
@@ -336,3 +321,11 @@ def set_link(tag):
         return new_tag #return new <i> tag
     else:
         return tag #If NO_LINKS false - no changes needed
+
+def create_summary(title, summary_text, summary_div):
+    soup = BeautifulSoup("", "html.parser") #Create a soup
+
+    summary_div.append(soup.new_tag("h2")) #Add a title
+    summary_div.h2.string = title
+    summary_div.append(summary_text) #Add the text
+    summary_div.blockquote.unwrap() #Remove blockquote
