@@ -49,9 +49,12 @@ class book:
         self.type = format_dict["file_type"]
 
         # GET FILE PATHS
-        self.origin_folder = format_dict["origin_folder"]
-        self.chapter_file_name =  format_dict["chapter_files"]
-        self.additional_files =  format_dict["additional_files"]
+        if (self.type == "LibreOffice"):
+            self.origin_folder = format_dict["origin_folder"]
+            self.chapter_file_name =  format_dict["chapter_files"]
+            self.additional_files =  format_dict["additional_files"]
+        else:
+            self.main_file = format_dict["main_file"]
 
         # BASIC INFO ---------------------------------------------------------------------------
         self.book_title = format_dict["title"]
