@@ -99,7 +99,8 @@ def clean_html_ao3(main_soup, format_book):
         main_soup: the soup generated from the main html file
         format_book: the book class that holds the information of the book and format data
     """
-    # CREATE FILES ##########################################################################################
+    # CREATE FILES ------------------------------------------------------------------------------------------
+
     # CREATE FOREWORD/PREFACE
     soup = build_preface(main_soup, "ao3")
     soup_to_file(soup, "final/preface.xhtml")
@@ -112,12 +113,11 @@ def clean_html_ao3(main_soup, format_book):
 
     #loop through all chpater contets
     for chapter_text in chapter_contents:
-        #CREATE BASIC FILE
-        epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
-        soup = create_base_xhtml(epub_roles, "Chapter") #Placeholder title until later search
+        soup = build_chapter(chapter_text, "ao3")
 
-        #ADD CSS
-        soup.body.section["class"] = "ficText"
+        #If there is no soup then build failed, skipped
+        if (not soup):
+            continue 
 
         #The tag that all the work will be done in. The "Working directory"
         working_tag = soup.body.section
@@ -125,31 +125,6 @@ def clean_html_ao3(main_soup, format_book):
         #Get meta group
         meta_group = chapter_text.find_previous_sibling("div", class_="meta group")
         endnote = chapter_text.find_next_sibling("div", id=("endnotes"+str(chapter_count))) #only return endnote for this chapter
-
-        #Create headings
-        if (meta_group):
-            #print(meta_group.h2.string)
-            working_tag.append(soup.new_tag("h1"))
-            working_tag.h1.string = meta_group.h2.string
-
-            soup.find("title").string = meta_group.h2.string
-
-            #if their are chapter notes
-            if (meta_group.find("blockquote")):
-                #print("Chapter Note")
-                working_tag.append(soup.new_tag("div", attrs={"class": "summary"}))
-                #Summary title
-                working_tag.find("div", class_="summary").append(soup.new_tag("h2"))
-                working_tag.find("div", class_="summary").h2.string = "Summary"
-
-                #Summary in blockquote
-                working_tag.find("div", class_="summary").append(soup.new_tag("blockquote"))
-                for tag in meta_group.find("blockquote").find_all("p"):
-                    #print(tag)
-                    working_tag.find("blockquote").append(tag)
-        else:
-            #If no meta group there may be an inner split - ignore
-            continue
 
         #Chapter text
         #working_tag.append(soup.new_tag("div", attrs={"class":"body_text"}))
@@ -213,7 +188,7 @@ def build_preface(file_soup, formatype) -> BeautifulSoup:
     ARGS:
     file_soup: BeautifulSoup
         Soup made from file. The file to be cleaned
-    type: String
+    formatype: String
         The type of file (where the file was generated). Controls logic paths for clean up.
         NOT IMPLEMENTED: ASSUMES ao3
     """
@@ -269,6 +244,50 @@ def build_preface(file_soup, formatype) -> BeautifulSoup:
     
     return soup
 
+def build_chapter(file_soup, formatype) -> BeautifulSoup:
+    """
+    ARGS:
+    file_soup: BeautifulSoup
+        Soup made from file. The file to be cleaned
+    formatype: String
+        The type of file (where the file was generated). Controls logic paths for clean up.
+        NOT IMPLEMENTED: ASSUMES ao3
+    """
+    #BUILD SKELETON FILE ------------------------------------------------------------------------------------
+    epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
+    soup = create_base_xhtml(epub_roles, "Chapter") #Placeholder title until later search
+    soup.section["class"] = "chapter-text" #add chapter css class
+
+    # GET CHAPTER NOTES -------------------------------------------------------------------------------------
+    front_note = file_soup.find_previous_sibling("div", class_="meta group") #Get possible front meta-group
+    end_note = file_soup.find_next_sibling() #get possible endnote - have to check its an endnote
+
+    # START CHAPTER PARSE -----------------------------------------------------------------------------------
+    if (not front_note): #If there isn't a front note possible sub chapter - ignore
+        return None #Return empty to be able to check if succeed
+    
+    # CREATE TITLE
+    soup.section.append(soup.new_tag("h1")) #Create title tag
+    soup.h1.string = front_note.h2.string #Get titles
+    soup.title = front_note.h2.string
+
+    # CHAPTER NOTES
+    if (front_note.find("blockquote")): #Check if their is a chapter summary/note
+        #Create summary div
+        soup.section.append(soup.new_tag("div", attrs={"class": "summary"}))
+
+        #Create summary title
+        soup.find("div", class_="summary").append(soup.new_tag("h2"))
+        soup.h2.string = "Chapter Summary"
+
+        #GET SUMMARY TEXT
+        for tag in front_note.find("blockquote").find_all("p"):
+            soup.find("div", class_="summary").append(tag)
+
+    # CHAPTER TEXT
+    
+
+    return soup
 
 #############################################################################################################
 ###### HELPER FUNCTIONS #####################################################################################
