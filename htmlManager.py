@@ -103,7 +103,7 @@ def clean_html_ao3(main_soup, format_book):
 
     # CREATE FOREWORD/PREFACE
     soup = build_preface(main_soup, "ao3")
-    soup_to_file(soup, "final/preface.xhtml")
+    soup_to_file(soup, "final/0-preface.xhtml")
 
     #START CHAPTERS 
     #Get all chapter text
@@ -117,7 +117,7 @@ def clean_html_ao3(main_soup, format_book):
         if (not soup):
             continue 
 
-        soup_to_file(soup, "final/test" + str(chapter_count) + ".xhtml")
+        soup_to_file(soup, "final/" + str(chapter_count) + "-chapter.xhtml")
         chapter_count += 1
     
     #AFTERWORD ------------------------------------------------------------------------------------------------
@@ -135,7 +135,7 @@ def clean_html_ao3(main_soup, format_book):
         soup.find("section").append(working_search.find("blockquote"))
         del soup.find("blockquote")["class"] #Delete class from blockquote
 
-        soup_to_file(soup, "final/afterword.xhtml")
+        soup_to_file(soup, "final/" + str(chapter_count) + "-afterword.xhtml")
         
 #############################################################################################################
 ###### FILE PART MANAGEMENT FUNCTIONS #######################################################################
