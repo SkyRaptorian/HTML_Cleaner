@@ -105,58 +105,17 @@ def clean_html_ao3(main_soup, format_book):
     soup = build_preface(main_soup, "ao3")
     soup_to_file(soup, "final/preface.xhtml")
 
-    #START CHAPTERS -----------------------------------------------------------------------------------------
-    working_search = main_soup.find("div", id="chapters") #The chapter area of the main file
+    #START CHAPTERS 
     #Get all chapter text
-    chapter_contents = working_search.find_all("div", class_="userstuff")
+    chapter_contents = main_soup.find("div", id="chapters").find_all("div", class_="userstuff")
     chapter_count = 1 #counter for the chapter - used to find endnotes
 
     #loop through all chpater contets
     for chapter_text in chapter_contents:
         soup = build_chapter(chapter_text, "ao3")
-
         #If there is no soup then build failed, skipped
         if (not soup):
             continue 
-
-        #The tag that all the work will be done in. The "Working directory"
-        working_tag = soup.body.section
-
-        #Get meta group
-        meta_group = chapter_text.find_previous_sibling("div", class_="meta group")
-        endnote = chapter_text.find_next_sibling("div", id=("endnotes"+str(chapter_count))) #only return endnote for this chapter
-
-        #Chapter text
-        #working_tag.append(soup.new_tag("div", attrs={"class":"body_text"}))
-        working_tag.append(chapter_text)
-        #print(type(chapter_text.children))
-        working_tag.find("div", class_="userstuff")["class"] = "body_text"
-        #Add text
-
-        #REMOVE DISALLOWED ATTRIBUTES TODO: Move to method that covers more attributes
-        #align is html only not for epub
-        attr_search = soup.find_all(align=True)
-        for tag in attr_search:
-            del tag["align"] #Remove align tag
-        #print(attr_search)
-
-        #Chapter end notes
-        if (endnote):
-            #print(endnote)
-            working_tag.append(soup.new_tag("div", attrs={"class":"endnotes"}))
-            working_tag.find("div", class_="endnotes").append(soup.new_tag("h2"))
-            working_tag.find("div", class_="endnotes").h2.string = "End Notes"
-
-            working_tag.find("div", class_="endnotes").append(soup.new_tag("blockquote"))
-
-            for tag in endnote.find("blockquote").find_all("p"):
-                    #print(tag)
-                    working_tag.find("div", class_="endnotes").blockquote.append(tag)
-
-        
-
-       #final FORMATTING
-       # 
 
         soup_to_file(soup, "final/test" + str(chapter_count) + ".xhtml")
         chapter_count += 1
@@ -269,24 +228,26 @@ def build_chapter(file_soup, formatype) -> BeautifulSoup:
     # CREATE TITLE
     soup.section.append(soup.new_tag("h1")) #Create title tag
     soup.h1.string = front_note.h2.string #Get titles
-    soup.title = front_note.h2.string
+    soup.title.string = front_note.h2.string
 
     # CHAPTER NOTES
     if (front_note.find("blockquote")): #Check if their is a chapter summary/note
         #Create summary div
         soup.section.append(soup.new_tag("div", attrs={"class": "summary"}))
-
-        #Create summary title
-        soup.find("div", class_="summary").append(soup.new_tag("h2"))
-        soup.h2.string = "Chapter Summary"
-
         #GET SUMMARY TEXT
-        for tag in front_note.find("blockquote").find_all("p"):
-            soup.find("div", class_="summary").append(tag)
+        create_summary("Chapter Summary", front_note.find("blockquote"), soup.find("div", class_="summary"))
 
     # CHAPTER TEXT
-    
+    file_soup["class"] = "body-text" #Set css class
+    soup.section.append(file_soup)
 
+    # CHAPTER END NOTES
+    if (not end_note.h2): #Only front notes have h2 tags, anything else is valid
+        soup.section.append(soup.new_tag("div", attrs={"class":"endnotes"}))
+        create_summary("Chapter End Notes", end_note.find("blockquote"), soup.find("div", class_="endnotes"))
+
+    #ENSURE SOUP IS VALID
+    remove_dissallowed_atrributes(soup)
     return soup
 
 #############################################################################################################
@@ -348,3 +309,10 @@ def create_summary(title, summary_text, summary_div):
     summary_div.h2.string = title
     summary_div.append(summary_text) #Add the text
     summary_div.blockquote.unwrap() #Remove blockquote
+
+#Check every for every disallowed attributes and clear them 
+def remove_dissallowed_atrributes(soup):
+    #ALIGN -------------------------------------------------
+    attr_search = soup.find_all(align=True)
+    for tag in attr_search:
+        del tag["align"] #Remove align tag
