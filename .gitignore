@@ -156,6 +156,7 @@ cython_debug/
 
 #Test py file for creating small functions without having to run the full thing
 test.py
+test_file.html
 
 #Ignore any other format files
 format/*.json
