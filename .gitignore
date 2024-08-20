@@ -160,4 +160,4 @@ test_file.html
 
 #Ignore any other format files
 format/*.json
-!format/example.json
+!format/example*.json

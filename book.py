@@ -12,7 +12,7 @@ class book:
     type = "LibreOffice" #Where the html files where generated, LibreOffice as defualt, String
 
     origin_folder = ".." #The origin folder with all the chapter files
-    chapter_file_name =  "Chapter {}" #The naming convention of the chapter files
+    chapter_file_name = "Chapter {}" #The naming convention of the chapter files
     #Dictionary of any additional chapter files that do not fit the standard chapter conventions in chapter_name
     #format: {file name: final file name}
     #folders are the same as defined of chapter_path and final_path
@@ -51,10 +51,12 @@ class book:
         # GET FILE PATHS
         if (self.type == "LibreOffice"):
             self.origin_folder = format_dict["origin_folder"]
-            self.chapter_file_name =  format_dict["chapter_files"]
-            self.additional_files =  format_dict["additional_files"]
+            self.chapter_file_name = format_dict["chapter_files"]
+            self.additional_files = format_dict["additional_files"]
         else:
             self.main_file = format_dict["main_file"]
+            self.oneshot = format_dict["oneshot"]
+            self.no_links = format_dict["no-links"]
 
         # BASIC INFO ---------------------------------------------------------------------------
         self.book_title = format_dict["title"]
