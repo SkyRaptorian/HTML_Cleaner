@@ -1,34 +1,56 @@
+"""
+This module manages all the html functions.
+
+Functions to clean the html and save the soup to file.
+
+"""
+
+# IMPORTS ##############################################################################################################
 from bs4 import BeautifulSoup
 from bs4 import Comment
 
+from book import Book
+# GLOBAL VARIABLES #####################################################################################################
 # Namespace dictionary, Manages all namespaces for consistency
 namespace_dict = {
     "xmlns": "http://www.w3.org/1999/xhtml",
     "xmlns:epub": "http://www.idpf.org/2007/ops"
 }
 
-# ARGUMENT SPACE
-# vars that cover cmd line arguments to take in top level
+# Global book value for the module - None when nothing is provided
+format_book: Book | None = None
 
-# BOOK RULES
-NO_LINKS: bool = False
-ONESHOT: bool = False
 
 # BOOK FORMAT LOGIC ####################################################################################################
 ########################################################################################################################
 
-def clean_libreOffice(file_soup, book, count):
+def clean_libreOffice(file_soup, file_book, count):
     """
-        The main entrance function for LibreOffice formats. Sets any global variables and
+    The method to create valid xhtml from a provided soup generated from LibreOffice html
 
-        :param file_soup:
-        :param format_book:
-        :return:
-        """
+    Identify whether the file is a chapter or an additional file by looking at the variable type of count.
+        * If int, chapter file
+        * If str, additional file
+
+    :param BeautifulSoup file_soup: The soup generated from the html file
+    :param Book file_book: The book details object
+    :param int|str count: The chapter number or the name of the additional file
+
+    :return: Void
+    """
+    # SET GLOBAL BOOK
+    global format_book
+    format_book = file_book
+
     # INITIAL HTML SET UP ----------------------------------------------------------------------------------------------
-    chapter_title = book.book_title + " | " + book.chapter_format.format(count)
     epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
-    soup = create_base_xhtml(epub_roles, chapter_title)
+
+    if type(count) is str:
+        part_title = file_book.book_title + " | " + file_book.additional_files[count]["title"]
+    else:
+        part_title = file_book.book_title + " | " + file_book.chapter_format.format(count)
+
+    soup = create_base_xhtml(epub_roles, part_title)
 
     # MANAGE CONTENTS --------------------------------------------------------------------------------------------------
     soup.section.append(file_soup.body)
@@ -36,14 +58,14 @@ def clean_libreOffice(file_soup, book, count):
 
     # MANAGE STYLING ---------------------------------------------------------------------------------------------------
     # add dictionary styles
-    for tag_type in book.style_dict:
+    for tag_type in file_book.style_dict:
         # configure tags to be searchable, change style class, clear all attributes.
         for styled_tag in soup.find_all(tag_type):
-            styled_tag["class"] = book.style_dict[tag_type]
+            styled_tag["class"] = file_book.style_dict[tag_type]
 
     # ADD SECTION BREAKS
     # MUST BE HR FOR ACCESSABILITY - ANY IMAGES MUST BE DONE IN CSS AS BACKGROUND IMAGE
-    for linebreak in soup.find_all("p", string=book.section_break_symbol):
+    for linebreak in soup.find_all("p", string=file_book.section_break_symbol):
         # Create hr tag
         linebreak_tag = soup.new_tag("hr")
         # add css file
@@ -73,22 +95,25 @@ def clean_libreOffice(file_soup, book, count):
 
     #print(type(count))
     if type(count) is str:
-        soup_to_file(soup, "final/" + book.additional_files[count]["final_name"] + ".xhtml")
+        soup_to_file(soup, "final/" + file_book.additional_files[count]["final_name"] + ".xhtml")
     else:
         soup_to_file(soup, "final/" + str(count) + "-chapter.xhtml")
 
 
-# A function to clean a generated html file from Archive of Our Own (https://archiveofourown.org/)
-# Must be locally downloaded and path provided into. Splits file into multiple xhtml files.
-# Called once
-def clean_ao3(main_soup, format_book):
+def clean_ao3(main_soup, file_book):
     """
-    ARGS:
-        main_soup: the soup generated from the main html file
-        format_book: the book class that holds the information of the book and format data
+    A function to clean a generated html file from Archive of Our Own (https://archiveofourown.org/)
+
+    :param BeautifulSoup main_soup: The soup made from the generated html.
+    :param Book file_book: The book details object
+    :return: Void
     """
+    # SET GLOBAL BOOK
+    global format_book
+    format_book = file_book
+
     # CREATE FILES -----------------------------------------------------------------------------------------------------
-    part_count = 0  #counter for the chapter - used for naming files
+    part_count = 0  # counter for the chapter - used for naming files
 
     # CREATE FOREWORD/PREFACE
     soup = build_preface(main_soup, "ao3")
@@ -96,7 +121,7 @@ def clean_ao3(main_soup, format_book):
     part_count += 1
 
     # CHAPTERS ---------------------------------------------------------------------------------------------------------
-    if ONESHOT:
+    if file_book.oneshot:
         # ONESHOT ONLY HAS ONE CHAPTER
         chapter_contents = main_soup.find("div", id="chapters").find("div", class_="userstuff")  # Get Text
         soup = build_oneshot(chapter_contents, "ao3")
@@ -127,79 +152,80 @@ def clean_ao3(main_soup, format_book):
 ########################################################################################################################
 
 # Pulls a preface from a soup
-def build_preface(file_soup, formatype) -> BeautifulSoup:
+def build_preface(file_soup, format_type):
     """
-    ARGS:
-    file_soup: BeautifulSoup
-        Soup made from file. The file to be cleaned
-    formatype: String
-        The type of file (where the file was generated). Controls logic paths for clean up.
-        NOT IMPLEMENTED: ASSUMES ao3
+    Builds a preface into a separate file from an ao3 soup.
+
+    :param BeautifulSoup file_soup: The full ao3 soup. Needs to have access to full file.
+    :param str format_type: NOT IMPLEMENTED
+    :return: BeautifulSoup
     """
-    #BUILD SKELETON FILE -------------------------------------------------------------------------------------
+    # BUILD SKELETON FILE ----------------------------------------------------------------------------------------------
     epub_roles = {"epub:type": "preface", "role": "doc-preface"}
-    soup = create_base_xhtml(epub_roles, "Preface")  #Basic File
+    soup = create_base_xhtml(epub_roles, "Preface")  # Basic File
 
-    soup.section.append(soup.new_tag("h1", attrs={"class": "title"}))  #Heading
-    soup.section.append(soup.new_tag("p", attrs={"class": "byline"}))  #Author byline
-    soup.section.append(soup.new_tag("p", attrs={"class": "link"}))  #Archive of Our Own link
+    soup.section.append(soup.new_tag("h1", attrs={"class": "title"}))  # Heading
+    soup.section.append(soup.new_tag("p", attrs={"class": "byline"}))  # Author byline
+    soup.section.append(soup.new_tag("p", attrs={"class": "link"}))  # Archive of Our Own link
 
-    soup.section.append(soup.new_tag("div", attrs={"class": "work-tags"}))  #Div for work tags
-    soup.div.append(soup.new_tag("dl"))  #Start description list
+    soup.section.append(soup.new_tag("div", attrs={"class": "work-tags"}))  # Div for work tags
+    soup.div.append(soup.new_tag("dl"))  # Start description list
 
-    soup.section.append(soup.new_tag("div", attrs={"class": "summary"}))  #Div for work summary
+    soup.section.append(soup.new_tag("div", attrs={"class": "summary"}))  # Div for work summary
 
-    #ENTER BASIC DETAILS ------------------------------------------------------------------------------------
+    # ENTER BASIC DETAILS ----------------------------------------------------------------------------------------------
     # HEADING
     soup.h1.string = file_soup.find("h1").string
 
     # AUTHOR
-    soup.find("p", class_="byline").string = "by "  #Start string
+    soup.find("p", class_="byline").string = "by "  # Start string
     soup.find("p", class_="byline").append(
-        set_link(file_soup.find("div", class_="byline").a))  #Append author name to byline after checking links
+        set_link(file_soup.find("div", class_="byline").a))  # Append author name to byline after checking links
 
     # WORK LINK
     work_link = file_soup.find("p", class_="message").find_all("a")
-    soup.find("p", class_="link").string = "Posted originally on the "  #Start the link line
-    soup.find("p", class_="link").append(set_link(work_link[0]))  #Add first link - Archive of Our Own
-    soup.find("p", class_="link").append(" at ")  #bridge links
-    soup.find("p", class_="link").append(set_link(work_link[1]))  #Add specific work link
-    soup.find("p", class_="link").append(".")  #end line
+    soup.find("p", class_="link").string = "Posted originally on the "  # Start the link line
+    soup.find("p", class_="link").append(set_link(work_link[0]))  # Add first link - Archive of Our Own
+    soup.find("p", class_="link").append(" at ")  # bridge links
+    soup.find("p", class_="link").append(set_link(work_link[1]))  # Add specific work link
+    soup.find("p", class_="link").append(".")  # end line
 
-    # TAG LIST --------------------------------------------------------------------------------------------
-    for tag in file_soup.dl:  #Get all description elements
-        if (tag.name == "dt"):  #If description element title
+    # TAG LIST ---------------------------------------------------------------------------------------------------------
+    for tag in file_soup.dl:  # Get all description elements
+        if tag.name == "dt":  # If description element title
             soup.dl.append(tag)
-        if (tag.name == "dd"):  #If description element decription
+        if tag.name == "dd":  # If description element description
             for a in tag.find_all("a"):
-                old_tag = a.replace_with(set_link(a))  #Check all links in dd
+                old_tag = a.replace_with(set_link(a))  # Check all links in dd
             soup.dl.append(tag)
 
     # SUMMARY AND NOTES ----------------------------------------------------------------------------------
     # SUMMARY, ALL WORKS HAVE ONE
-    summary_text = file_soup.find("div", id="preface").find("p",
-                                                            string="Summary").find_next_sibling()  #Get the summary blocktext
+    summary_text = (file_soup.find("div", id="preface")
+                    .find("p", string="Summary").find_next_sibling())  # Get the summary blocktext
     create_summary("Summary", summary_text, soup.find("div", class_="summary"))
 
     # NOTES, NEED TO CHECK FIRST
     notes_text = file_soup.find("div", id="preface").find("p",
-                                                          string="Notes").find_next_sibling()  #Get the notes blocktext
+                                                          string="Notes").find_next_sibling()  # Get the notes blocktext
 
-    if (notes_text):  #Check there is a note
-        soup.section.append(soup.new_tag("div", attrs={"class": "notes"}))  #create div for work notes
-        create_summary("Notes", notes_text, soup.find("div", class_="notes"))  #MAke the note text
+    if notes_text:  # Check there is a note
+        soup.section.append(soup.new_tag("div", attrs={"class": "notes"}))  # create div for work notes
+        create_summary("Notes", notes_text, soup.find("div", class_="notes"))  # Make the note text
 
     return soup
 
 
-def build_oneshot(file_soup, formatype) -> BeautifulSoup:
+def build_oneshot(file_soup, format_type):
     """
-        :param file_soup: BeautifulSoup
-            Soup made from file. The file to be cleaned
-        :param formatype: String
-            The type of file (where the file was generated). Controls logic paths for clean up.
-            NOT IMPLEMENTED: ASSUMES ao3
-        """
+    Builds an ao3 oneshot.
+
+    A 'oneshot' is a fic with only a single chapter. As such it does not need chapter notes (either beginning or end).
+
+    :param BeautifulSoup file_soup: The specific <div class="chapter"> part of the soup
+    :param str format_type: NOT IMPLEMENTED
+    :return: BeautifulSoup
+    """
     # BUILD SKELETON FILE ----------------------------------------------------------------------------------------------
     epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
     soup = create_base_xhtml(epub_roles, "Chapter")  # Placeholder title until later search
@@ -219,14 +245,18 @@ def build_oneshot(file_soup, formatype) -> BeautifulSoup:
     return soup
 
 
-def build_chapter(file_soup, formatype) -> BeautifulSoup | None:
+def build_chapter(file_soup, format_type):
     """
-    ARGS:
-    file_soup: BeautifulSoup
-        Soup made from file. The file to be cleaned
-    formatype: String
-        The type of file (where the file was generated). Controls logic paths for clean up.
-        NOT IMPLEMENTED: ASSUMES ao3
+    Builds an individual chapter and returns new Soup that with just the chapter.
+
+    Checks that the chapter has a matching 'meta group' which has the chapter heading and the chapter notes (if any).
+    If there is no matching group then return None.
+
+    If valid endnotes can be found - include them
+
+    :param BeautifulSoup file_soup: The specific <div class="chapter"> part of the soup
+    :param str format_type: NOT IMPLEMENTED
+    :return: BeautifulSoup | None
     """
     # BUILD SKELETON FILE ----------------------------------------------------------------------------------------------
     epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
@@ -267,13 +297,20 @@ def build_chapter(file_soup, formatype) -> BeautifulSoup | None:
     return soup
 
 
-def build_afterword(afterword_text, format_type) -> BeautifulSoup:
+def build_afterword(file_soup, format_type):
+    """
+    Builds the afterword into a separate file from an ao3 soup.
+
+    :param BeautifulSoup file_soup: The soup of just the afterword text
+    :param str format_type: NOT IMPLEMENTED
+    :return: BeautifulSoup
+    """
     # CREATE BASIC FILES
     epub_roles = {"epub:type": "afterword", "role": "doc-afterword"}
     soup = create_base_xhtml(epub_roles, "Afterword")
     # ADD CONTENT
     soup.section.append(soup.new_tag("div", attrs={"class": "notes"}))  # Create a div for notes
-    create_summary("End Notes:", afterword_text.blockquote, soup.div)
+    create_summary("End Notes:", file_soup.blockquote, soup.div)
 
     return soup
 
@@ -281,17 +318,15 @@ def build_afterword(afterword_text, format_type) -> BeautifulSoup:
 # HELPER FUNCTIONS #####################################################################################################
 ########################################################################################################################
 
-def create_base_xhtml(epub_roles: dict, title: str) -> BeautifulSoup:
+def create_base_xhtml(epub_roles, title):
     """
     Creates a basic xhtml file skeleton for content to be added into.
 
-    :param epub_roles: A dictionary that contains information about the documents accessibility properties.
+    :param dict epub_roles: A dictionary that contains information about the documents accessibility properties.
         Dictionary requires both a 'epub:type' and a 'role' (aria-role).
-        :type epub_roles: dict
-    :param title: The string to be placed in the <title> tag
-        :type title: str
+    :param str title: The string to be placed in the <title> tag
 
-    :return BeautifulSoup:
+    :return: BeautifulSoup
     """
     # CREATE NEW XHTML FILE --------------------------------------------------------------------------------------------
     soup = BeautifulSoup("<!DOCTYPE html>", "html.parser")
@@ -322,16 +357,14 @@ def create_base_xhtml(epub_roles: dict, title: str) -> BeautifulSoup:
     return soup  # Return prepared soup
 
 
-def soup_to_file(soup: BeautifulSoup, file_name: str):
+def soup_to_file(soup, file_name):
     """
     Saves a soup to a .xhtml file
 
-    :param soup: The soup to be saved to file
-        :type soup: BeautifulSoup
-    :param file_name: The file name to save the soup under. The .xhtml is added in function.
-        :type file_name: str
+    :param BeautifulSoup soup: The soup to be saved to file
+    :param str file_name: The file name to save the soup under. The .xhtml is added in function.
 
-    :return Void:
+    :return: Void
     """
     output = open(file_name, "w")
 
@@ -344,10 +377,16 @@ def soup_to_file(soup: BeautifulSoup, file_name: str):
     print("COMPLETED: " + file_name + "                      ", end='\r')  # Add whitespace to clear line
 
 
-# A function to manage the NO_LINKS option.
-# When given a <a> tag, check the NO_LINKS rule and remove link if true
 def set_link(tag):
-    if NO_LINKS:
+    """
+    A helper function to manage the no_links option.
+
+    When given a <a> tag, check the NO_LINKS rule and remove link if true
+
+    :param BeautifulSoup tag: The <a> ref that is being inserted
+    :return: BeautifulSoup
+    """
+    if format_book.no_links:
         soup = BeautifulSoup("", "html.parser")
 
         string_data = tag.string  # Get the string value of the old tag
@@ -361,6 +400,16 @@ def set_link(tag):
 
 
 def create_summary(title, summary_text, summary_div):
+    """
+    Creates a standard summary format for ao3 style notes and summary's
+
+    Edits soup in place
+
+    :param str title: The title of the summary
+    :param BeautifulSoup summary_text: The original summary text from file
+    :param BeautifulSoup summary_div: The new location for the summary
+    :return: Void
+    """
     soup = BeautifulSoup("", "html.parser")  # Create a soup
 
     summary_div.append(soup.new_tag("h2"))  # Add a title
@@ -369,9 +418,16 @@ def create_summary(title, summary_text, summary_div):
     summary_div.blockquote.unwrap()  # Remove blockquote
 
 
-# Check every for every disallowed attributes and clear them
 def remove_dissallowed_atrributes(soup):
-    # ALIGN
+    """
+    Removes any tags or attributes that are not valid for an epub.
+
+    Edits soup in place
+
+    :param BeautifulSoup soup: The soup to check for tags/attributes
+    :return: Void
+    """
+    # ALIGN ATTRIBUTE
     attr_search = soup.find_all(align=True)
     for tag in attr_search:
         del tag["align"]  #Remove align tag
