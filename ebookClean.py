@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 from bs4 import Comment
 
 # Custom classes
-from htmlManager import clean_html_libreOffice
+import htmlManager
 from book import book
 
 import os.path
@@ -70,30 +70,31 @@ print(thisBook)
 
 # MAIN LOOP --------------------------------------------------------------------------------------------------
 #Loop for main chapter files. Continue until an existing file cannot be found.
-while os.path.exists(chapter_path.format(chapter_count)):
+#while os.path.exists(chapter_path.format(chapter_count)):
 
+htmlManager.clean_html(thisBook)
   #Open the chapter file
-  file = open(chapter_path.format(chapter_count))
+  #file = open(chapter_path.format(chapter_count))
   
 
   #Create the soup for parsing
-  soup = BeautifulSoup(file, 'html.parser')
+  #soup = BeautifulSoup(file, 'html.parser')
 
   #Clean HTML
-  clean_html_libreOffice(soup, thisBook, chapter_count)
+  #clean_html_libreOffice(soup, thisBook, chapter_count)
 
   #Create output files
-  output = open(final_path.format(chapter_count), "w")
-  soup.encode(formatter="html") #encode to html
-  output.write(str(soup)) #Write to file
+  #output = open(final_path.format(chapter_count), "w")
+  #soup.encode(formatter="html") #encode to html
+  #output.write(str(soup)) #Write to file
 
   #Close files
-  file.close()
-  output.close()
+  #file.close()
+  #output.close()
 
-  print("COMPLETED: " + final_path.format(chapter_count), end='\r')
+  #print("COMPLETED: " + final_path.format(chapter_count), end='\r')
 
-  chapter_count += 1 #increment chapter count
+  #chapter_count += 1 #increment chapter count
 
 #Loop through all additional files provided
 for file_name in thisBook.additional_files:
@@ -109,7 +110,7 @@ for file_name in thisBook.additional_files:
     soup = BeautifulSoup(file, 'html.parser')
 
     #Clean HTML
-    clean_html_libreOffice(soup, thisBook, "ADDITIONAL")
+    htmlManager.single_file_libreOffice(soup, thisBook, "ADDITIONAL")
 
     #Create output files
     output = open(additional_final, "w")

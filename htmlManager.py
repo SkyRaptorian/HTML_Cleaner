@@ -1,6 +1,8 @@
 from bs4 import BeautifulSoup
 from bs4 import Comment
 
+import os
+
 import re  #Needed for string searches
 
 #Namespace dictionary, Manages all namespaces for consistency
@@ -25,7 +27,21 @@ ONESHOT: bool = False
 def clean_html(book):
     match book.type:
         case "LibreOffice":
-            pass
+            # BUILD CHAPTER PATH
+            chapter_count = 1
+            chapter_path = "{}/{}.html".format(book.origin_folder, book.chapter_file_name)
+            #print(chapter_path)
+            # LOOP THROUGH ALL CHAPTERS
+            while os.path.exists(chapter_path.format(chapter_count)):
+                #print(chapter_path.format(chapter_count))
+                file = open(chapter_path.format(chapter_count), "r")
+                file_soup = BeautifulSoup(file, "html.parser")
+
+                single_file_libreOffice(file_soup, book, chapter_count)
+
+                file.close()
+
+                chapter_count += 1
         case "ao3":
             # SET LOGIC VARIABLES
             global NO_LINKS
@@ -37,15 +53,19 @@ def clean_html(book):
             # OPEN FILES
             file = open(book.main_file+".html", "r")
             file_soup = BeautifulSoup(file, "html.parser")
+
             single_file_ao3(file_soup, book)
+
             file.close()
 
 
 # BOOK FORMAT LOGIC ####################################################################################################
 ########################################################################################################################
 
-def clean_html_libreOffice(soup, book, count):
+def single_file_libreOffice(soup, book, count):
     # INITIAL HTML SET UP ###################################################################################
+    #epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
+    #soup = create_base_xhtml(epub_roles, "Chapter")
     # NAMESPACES --------------------------------------------------------------------------------------------
     #ADD XHTML NAMESPACE
     soup.html["xmlns"] = namespace_dict["xmlns"]
@@ -118,6 +138,8 @@ def clean_html_libreOffice(soup, book, count):
         comment = Comment(l.string)
 
         l.replace_with(comment)
+
+    soup_to_file(soup, "final/" + str(count) + "-chapter.xhtml")
 
 
 # A function to clean a generated html file from Archive of Our Own (https://archiveofourown.org/)
@@ -358,9 +380,11 @@ def create_base_xhtml(epub_roles, title) -> BeautifulSoup:
 
 def soup_to_file(soup, file_name):
     # A function to save the soup to a file
-    output = open(file_name, "w")  #Create file
-    soup.encode(formatter="html")  #encode to html
-    output.write(str(soup))  #Write to file
+    output = open(file_name, "w")   # Create file
+    soup.encode(formatter="html")   # encode to html
+    output.write(str(soup))   # Write to file
+
+    print("COMPLETED: " + file_name + "                      ", end='\r')  # Add whitespace to keep clean
 
 
 #return link based off of NO_LINKS rule
