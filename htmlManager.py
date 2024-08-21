@@ -1,11 +1,7 @@
 from bs4 import BeautifulSoup
 from bs4 import Comment
 
-import os
-
-import re  #Needed for string searches
-
-#Namespace dictionary, Manages all namespaces for consistency
+# Namespace dictionary, Manages all namespaces for consistency
 namespace_dict = {
     "xmlns": "http://www.w3.org/1999/xhtml",
     "xmlns:epub": "http://www.idpf.org/2007/ops"
@@ -18,51 +14,17 @@ namespace_dict = {
 NO_LINKS: bool = False
 ONESHOT: bool = False
 
-# ENTRANCE FUNCTION ####################################################################################################
-########################################################################################################################
-
-
-# The main entrance function, takes a book and produces clean files.
-#Sets book-wide variables and go to correct function
-def clean_html(book):
-    match book.type:
-        case "LibreOffice":
-            # BUILD CHAPTER PATH
-            chapter_count = 1
-            chapter_path = "{}/{}.html".format(book.origin_folder, book.chapter_file_name)
-            #print(chapter_path)
-            # LOOP THROUGH ALL CHAPTERS
-            while os.path.exists(chapter_path.format(chapter_count)):
-                #print(chapter_path.format(chapter_count))
-                file = open(chapter_path.format(chapter_count), "r")
-                file_soup = BeautifulSoup(file, "html.parser")
-
-                single_file_libreOffice(file_soup, book, chapter_count)
-
-                file.close()
-
-                chapter_count += 1
-        case "ao3":
-            # SET LOGIC VARIABLES
-            global NO_LINKS
-            global ONESHOT
-
-            NO_LINKS = book.no_links
-            ONESHOT = book.oneshot
-
-            # OPEN FILES
-            file = open(book.main_file+".html", "r")
-            file_soup = BeautifulSoup(file, "html.parser")
-
-            single_file_ao3(file_soup, book)
-
-            file.close()
-
-
 # BOOK FORMAT LOGIC ####################################################################################################
 ########################################################################################################################
 
-def single_file_libreOffice(file_soup, book, count):
+def clean_libreOffice(file_soup, book, count):
+    """
+        The main entrance function for LibreOffice formats. Sets any global variables and
+
+        :param file_soup:
+        :param format_book:
+        :return:
+        """
     # INITIAL HTML SET UP ----------------------------------------------------------------------------------------------
     chapter_title = book.book_title + " | " + book.chapter_format.format(count)
     epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
@@ -90,9 +52,9 @@ def single_file_libreOffice(file_soup, book, count):
         # replace placeholder symbol with new tag
         linebreak.replace_with(linebreak_tag)
 
-    #REMOVE JUNK TO SIMPLIFY -------------------------------------------------------------------
-    #LibreOffice adds these tags for small things that don't always make sense. Especially with
-    #cut and paste. Add manually after cleaning if specific effect needed.
+    # REMOVE JUNK TO SIMPLIFY -------------------------------------------------------------------
+    # LibreOffice adds these tags for small things that don't always make sense. Especially with
+    # cut and paste. Add manually after cleaning if specific effect needed.
     for data in soup.find_all("font"):
         data.unwrap()
 
@@ -102,20 +64,24 @@ def single_file_libreOffice(file_soup, book, count):
     for data in soup.find_all(string="&nbsp;"):
         data.decompose()
 
-    #ADDITIONAL ADJUSTMENTS --------------------------------------------------------------------
-    #Add other things here - POV image adjustments
+    # ADDITIONAL ADJUSTMENTS --------------------------------------------------------------------
+    # Add other things here - POV image adjustments
     for l in soup.find_all("pre"):
         comment = Comment(l.string)
 
         l.replace_with(comment)
 
-    soup_to_file(soup, "final/" + str(count) + "-chapter.xhtml")
+    #print(type(count))
+    if type(count) is str:
+        soup_to_file(soup, "final/" + book.additional_files[count]["final_name"] + ".xhtml")
+    else:
+        soup_to_file(soup, "final/" + str(count) + "-chapter.xhtml")
 
 
 # A function to clean a generated html file from Archive of Our Own (https://archiveofourown.org/)
 # Must be locally downloaded and path provided into. Splits file into multiple xhtml files.
 # Called once
-def single_file_ao3(main_soup, format_book):
+def clean_ao3(main_soup, format_book):
     """
     ARGS:
         main_soup: the soup generated from the main html file
@@ -132,7 +98,7 @@ def single_file_ao3(main_soup, format_book):
     # CHAPTERS ---------------------------------------------------------------------------------------------------------
     if ONESHOT:
         # ONESHOT ONLY HAS ONE CHAPTER
-        chapter_contents = main_soup.find("div", id="chapters").find("div",class_="userstuff")  # Get Text
+        chapter_contents = main_soup.find("div", id="chapters").find("div", class_="userstuff")  # Get Text
         soup = build_oneshot(chapter_contents, "ao3")
 
         soup_to_file(soup, "final/" + str(part_count) + "-chapter.xhtml")
@@ -228,10 +194,9 @@ def build_preface(file_soup, formatype) -> BeautifulSoup:
 
 def build_oneshot(file_soup, formatype) -> BeautifulSoup:
     """
-        ARGS:
-        file_soup: BeautifulSoup
+        :param file_soup: BeautifulSoup
             Soup made from file. The file to be cleaned
-        formatype: String
+        :param formatype: String
             The type of file (where the file was generated). Controls logic paths for clean up.
             NOT IMPLEMENTED: ASSUMES ao3
         """
@@ -254,7 +219,7 @@ def build_oneshot(file_soup, formatype) -> BeautifulSoup:
     return soup
 
 
-def build_chapter(file_soup, formatype) -> BeautifulSoup:
+def build_chapter(file_soup, formatype) -> BeautifulSoup | None:
     """
     ARGS:
     file_soup: BeautifulSoup
@@ -316,58 +281,83 @@ def build_afterword(afterword_text, format_type) -> BeautifulSoup:
 # HELPER FUNCTIONS #####################################################################################################
 ########################################################################################################################
 
-def create_base_xhtml(epub_roles, title) -> BeautifulSoup:
-    #Creates an empty soup with the basic skeleton of a xhtml file created
+def create_base_xhtml(epub_roles: dict, title: str) -> BeautifulSoup:
+    """
+    Creates a basic xhtml file skeleton for content to be added into.
 
-    #CREATE NEW XHTML FILE ##################################################################################
+    :param epub_roles: A dictionary that contains information about the documents accessibility properties.
+        Dictionary requires both a 'epub:type' and a 'role' (aria-role).
+        :type epub_roles: dict
+    :param title: The string to be placed in the <title> tag
+        :type title: str
+
+    :return BeautifulSoup:
+    """
+    # CREATE NEW XHTML FILE --------------------------------------------------------------------------------------------
     soup = BeautifulSoup("<!DOCTYPE html>", "html.parser")
 
-    #CREATE SHELL -----------------------------------------------------
-    soup.append(soup.new_tag("html"))  #Create html tag
+    # CREATE NAMESPACES ------------------------------------------------------------------------------------------------
+    soup.append(soup.new_tag("html"))  # Create html tag
     soup.html["xmlns"] = namespace_dict["xmlns"]
     soup.html["xmlns:epub"] = namespace_dict["xmlns:epub"]
 
-    # CREATE HEAD -----------------------------------------------------
-    soup.html.append(soup.new_tag("head"))  #Create head tag
-    soup.html.head.append(soup.new_tag("meta"))  #Create meta tag
+    # CREATE HEAD ------------------------------------------------------------------------------------------------------
+    soup.html.append(soup.new_tag("head"))  # Create head tag
+    soup.html.head.append(soup.new_tag("meta"))  # Create meta tag
     soup.html.head.meta["charset"] = "utf-8"
 
-    soup.html.head.append(soup.new_tag("title"))  #Create title tag, leave empty
+    soup.html.head.append(soup.new_tag("title"))  # Create title tag, leave empty
     soup.find("title").string = title
 
     soup.html.head.append(
         soup.new_tag("link", attrs={"rel": "stylesheet", "type": "text/css", "href": "../styles.css"}))
 
-    # CREATE BODY -----------------------------------------------------
-    soup.html.append(soup.new_tag("body"))  #Create body tag
-    soup.body.append(soup.new_tag("section"))  #Create section tag, needed for accessability roles
-    #ADD ACCESSABILITY ROLES
+    # CREATE BODY ------------------------------------------------------------------------------------------------------
+    soup.html.append(soup.new_tag("body"))  # Create body tag
+    soup.body.append(soup.new_tag("section"))  # Create section tag, needed for accessibility roles
+    # ADD ACCESSIBILITY ROLES
     soup.body.section["epub:type"] = epub_roles["epub:type"]
     soup.body.section["role"] = epub_roles["role"]
 
-    return soup
+    return soup  # Return prepared soup
 
 
-def soup_to_file(soup, file_name):
-    # A function to save the soup to a file
-    output = open(file_name, "w")   # Create file
-    soup.encode(formatter="html")   # encode to html
-    output.write(str(soup))   # Write to file
+def soup_to_file(soup: BeautifulSoup, file_name: str):
+    """
+    Saves a soup to a .xhtml file
 
-    print("COMPLETED: " + file_name + "                      ", end='\r')  # Add whitespace to keep clean
+    :param soup: The soup to be saved to file
+        :type soup: BeautifulSoup
+    :param file_name: The file name to save the soup under. The .xhtml is added in function.
+        :type file_name: str
+
+    :return Void:
+    """
+    output = open(file_name, "w")
+
+    # ENCODE TO HTML INCASE THERE IS AN ISSUE
+    soup.encode(formatter="html")
+    output.write(str(soup))
+
+    output.close()
+
+    print("COMPLETED: " + file_name + "                      ", end='\r')  # Add whitespace to clear line
 
 
-#return link based off of NO_LINKS rule
-# if True replace a href tag with <i>
+# A function to manage the NO_LINKS option.
+# When given a <a> tag, check the NO_LINKS rule and remove link if true
 def set_link(tag):
-    if (NO_LINKS):
-        soup = BeautifulSoup("", "html.parser")  #Create a soup
-        string_data = tag.string  #Get old tag string
-        new_tag = soup.new_tag("i")  #Create new <i> tag
-        new_tag.string = string_data  #give string to new tag
-        return new_tag  #return new <i> tag
+    if NO_LINKS:
+        soup = BeautifulSoup("", "html.parser")
+
+        string_data = tag.string  # Get the string value of the old tag
+
+        new_tag = soup.new_tag("i")  # Create replacement string
+        new_tag.string = string_data
+
+        return new_tag  # Return tag with link removed
     else:
-        return tag  #If NO_LINKS false - no changes needed
+        return tag  # Removed unchanged tag
 
 
 def create_summary(title, summary_text, summary_div):
