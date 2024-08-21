@@ -121,7 +121,7 @@ def clean_ao3(main_soup, file_book):
     part_count += 1
 
     # CHAPTERS ---------------------------------------------------------------------------------------------------------
-    if file_book.oneshot:
+    if file_book.rules["oneshot"]:
         # ONESHOT ONLY HAS ONE CHAPTER
         chapter_contents = main_soup.find("div", id="chapters").find("div", class_="userstuff")  # Get Text
         soup = build_oneshot(chapter_contents, "ao3")
@@ -386,7 +386,7 @@ def set_link(tag):
     :param BeautifulSoup tag: The <a> ref that is being inserted
     :return: BeautifulSoup
     """
-    if format_book.no_links:
+    if format_book.rules["no-links"]:
         soup = BeautifulSoup("", "html.parser")
 
         string_data = tag.string  # Get the string value of the old tag

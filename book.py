@@ -1,15 +1,34 @@
-### Class to manage the details of the ebook for parameter passing
-### AUTHOR: SkyRaptorian
-### CREATION DATE: 11 AUG 2023
-### MODIFIED DATE: 11 AUG 2023
+"""
+Manages all information about processed book including file paths and formatting rules
+"""
 
-import json #The JSON parser for python
+# IMPORTS ##############################################################################################################
+import json
+import enum
 
-class book:
-    # CLASS VARIABLES #########################################################################
-    #Technically not needed at the start for python, but easier to see here
-    version = 0 #The version in order to check for compatability issues, int
-    type = "LibreOffice" #Where the html files where generated, LibreOffice as defualt, String
+
+# ENUM #################################################################################################################
+class FileType(str, enum.Enum):
+    """
+    An enum to contain all valid file types.
+
+    Inherits from string to assist in comparisons
+    """
+    LIBREOFFICE = "LibreOffice"
+    AO3 = "ao3"
+    SERIES = "Series"
+
+
+# MAIN CLASS ###########################################################################################################
+class Book:
+    """
+    Class to contain information about the book being processed.
+    """
+    # CLASS VARIABLES --------------------------------------------------------------------------------------------------
+    # Technically not needed at the start for python, but easier to see here
+    #file_types: dict = {
+    #    FileType.LIBREOFFICE: "LibreOffice"
+    #}
 
     origin_folder = ".." #The origin folder with all the chapter files
     chapter_file_name = "Chapter {}" #The naming convention of the chapter files
@@ -29,34 +48,64 @@ class book:
 
     # CONSTRUCTORS ############################################################################
     def __init__(self, file_version, json_file):
-        self.version = file_version
-        self.read_format(json_file)
+        """
+        The init function.
 
-    #Construct directly from json files
+        :param int file_version: A file version to compare against
+        :param file json_file: The JSON file to parse
+        """
+        self.version: int = file_version  # The version in order to check for compatibility issues
+        self.type: str = None  # Where the html files where generated, LibreOffice as default
+
+        self.rules: dict = {}  # A dictionary with all the specific rules for each book. AKA no_links and such
+
+        try:
+            self.read_format(json_file)  # Get information from JSON file
+        except KeyError as error:
+            print("The provided JSON file is missing the value: " + str(error))
+            exit()
+        except:
+            print("There is an error with the JSON file provided.")
+            exit()
+
     def read_format(self, file):
-        # SET UP ------------------------------------------------------------------------------
-        #Parse from JSON:
-        format_dict = json.load(file)
+        """
+        Read the JSON file into the class. Called from __init__
 
-        #check file version
-        #if different warn user and attempt to continue
+        :param file file: A JSON file to parse
+        :return: Void
+        """
+        # SET UP -------------------------------------------------------------------------------------------------------
+        format_dict: dict = json.load(file)  # Load JSON fil
+
+        # Check file version matches
         if format_dict["version"] != self.version:
-            print("The JSON file has a different version then the program provided.\nAttempting to continue... problems may occur.\n")
+            print("The JSON file has a different version then the program provided.")
+            exit()
 
-        # BUILD BOOK FORMAT --------------------------------------------------------------------
-    
-        # GET FILE TYPE
-        self.type = format_dict["file_type"]
+        # BUILD BOOK FORMAT --------------------------------------------------------------------------------------------
+        # FILE TYPE
+        if "file_type" in format_dict and format_dict["file_type"] in FileType:
+            # If there is a file_type in file AND if it is a valid (found in enum)
+            self.type = format_dict["file_type"]
+        else:
+            print("No valid file_type provided.")
+            exit()
 
         # GET FILE PATHS
-        if (self.type == "LibreOffice"):
-            self.origin_folder = format_dict["origin_folder"]
-            self.chapter_file_name = format_dict["chapter_files"]
-            self.additional_files = format_dict["additional_files"]
-        else:
-            self.main_file = format_dict["main_file"]
-            self.oneshot = format_dict["oneshot"]
-            self.no_links = format_dict["no-links"]
+        match self.type:
+            case FileType.LIBREOFFICE:
+                self.origin_folder = format_dict["origin_folder"]
+                self.chapter_file_name = format_dict["chapter_files"]
+                self.additional_files = format_dict["additional_files"]
+            case FileType.AO3:
+                self.main_file = format_dict["main_file"]
+
+                # AO3 RULES
+                self.rules["oneshot"] = format_dict["oneshot"]
+                self.rules["no-links"] = format_dict["no-links"]
+            case FileType.SERIES:
+                pass
 
         # BASIC INFO ---------------------------------------------------------------------------
         self.book_title = format_dict["title"]
