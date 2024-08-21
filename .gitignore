@@ -154,7 +154,8 @@ cython_debug/
 #Final Export Files
 *.xhtml
 
-#Test py file for creating small functions without having to run the full thing
+#Testing files for creating small functions without having to run the full thing
+/test
 test.py
 test_file.html
 
