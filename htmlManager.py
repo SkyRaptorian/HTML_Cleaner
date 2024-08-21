@@ -62,63 +62,33 @@ def clean_html(book):
 # BOOK FORMAT LOGIC ####################################################################################################
 ########################################################################################################################
 
-def single_file_libreOffice(soup, book, count):
-    # INITIAL HTML SET UP ###################################################################################
-    #epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
-    #soup = create_base_xhtml(epub_roles, "Chapter")
-    # NAMESPACES --------------------------------------------------------------------------------------------
-    #ADD XHTML NAMESPACE
-    soup.html["xmlns"] = namespace_dict["xmlns"]
-    #ADD EPUB TYPE NAME SPACE
-    soup.html["xmlns:epub"] = namespace_dict["xmlns:epub"]
+def single_file_libreOffice(file_soup, book, count):
+    # INITIAL HTML SET UP ----------------------------------------------------------------------------------------------
+    chapter_title = book.book_title + " | " + book.chapter_format.format(count)
+    epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
+    soup = create_base_xhtml(epub_roles, chapter_title)
 
-    # MANAGE HTML HEAD --------------------------------------------------------------------------------------
-    #MANAGE HEAD TAGS
-    soup.title.string = book.book_title + " | " + book.chapter_format.format(count)  #Populate <title> tags
+    # MANAGE CONTENTS --------------------------------------------------------------------------------------------------
+    soup.section.append(file_soup.body)
+    soup.section.body.unwrap()  # Remove additional body tag
 
-    #REMOVE LibreOffice META TAGS
-    soup.find("meta", attrs={"name": "generator"}).decompose()
-    soup.find("meta", attrs={"name": "created"}).decompose()
-    soup.find("meta", attrs={"name": "changed"}).decompose()
-
-    #REMOVE DEFAULT STYLING
-    soup.find("style").decompose()
-
-    #MANAGE HTML BODY ---------------------------------------------------------------------------------------
-    #REMOVE AUTO GENERATED BODY TAG ATTRIBUTES
-    attr_to_del = soup.body.attrs.copy()  #Copy dictionary to prevent iteration issues
-    for attr in attr_to_del:
-        del soup.body[attr]  # Delete all attributes in the body tag
-
-    #WRAP BODY TEXT IN SECTION TAG FOR ACCESSIBILITY
-    #JANKY JANK... there is probably easier way to wrap everything in the body within a section, but this works too
-    #TODO: Find the better method
-    soup.body.wrap(soup.new_tag("section"))
-    soup.section.body.unwrap()
-    soup.section.wrap(soup.new_tag("body"))
-
-    #ADD ACCESSABILITY ROLES
-    soup.body.section["epub:type"] = "chapter"
-    soup.body.section["role"] = "doc-chapter"
-
-    # HTML STYLING FROM DICTIONARY #########################################################################
-    #START STYLES FROM FORMAT DICTIONARY
-    #add dictionary styles
+    # MANAGE STYLING ---------------------------------------------------------------------------------------------------
+    # add dictionary styles
     for tag_type in book.style_dict:
-        #configure tags to be searchable, change style class, clear all attributes.
+        # configure tags to be searchable, change style class, clear all attributes.
         for styled_tag in soup.find_all(tag_type):
             styled_tag["class"] = book.style_dict[tag_type]
 
     # ADD SECTION BREAKS
     # MUST BE HR FOR ACCESSABILITY - ANY IMAGES MUST BE DONE IN CSS AS BACKGROUND IMAGE
-    for l in soup.find_all("p", string=book.section_break_symbol):
-        #Create hr tag
+    for linebreak in soup.find_all("p", string=book.section_break_symbol):
+        # Create hr tag
         linebreak_tag = soup.new_tag("hr")
-        #add css file
+        # add css file
         linebreak_tag["class"] = "linebreak"
 
-        #replace placeholder symbol with new tag
-        l.replace_with(linebreak_tag)
+        # replace placeholder symbol with new tag
+        linebreak.replace_with(linebreak_tag)
 
     #REMOVE JUNK TO SIMPLIFY -------------------------------------------------------------------
     #LibreOffice adds these tags for small things that don't always make sense. Especially with
