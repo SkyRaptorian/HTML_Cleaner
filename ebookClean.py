@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 
 # Custom classes
 import htmlManager
-from book import book
+from book import Book
 
 import os.path
 
@@ -35,7 +35,7 @@ format_path = "format/{}.json".format(format_name)
 # FORMAT SETUP ---------------------------------------------------------------------------------------------------------
 if os.path.exists(format_path):  # Check if the book format file exists
     format_file = open(format_path, 'r')
-    thisBook = book(0, format_file)
+    thisBook = Book(0, format_file)
     format_file.close()
 else:  # NO FORMAT FOUND - EXIT
     print("Error: Format does not exist")
@@ -47,7 +47,7 @@ match thisBook.type:
     case "LibreOffice":
         # BUILD CHAPTER PATH
         chapter_count = 1
-        chapter_path = "{}/{}.html".format(thisBook.origin_folder, thisBook.chapter_file_name)
+        chapter_path = "{}/{}.html".format(thisBook.primary_path, thisBook.file_name)
         # LOOP THROUGH ALL CHAPTERS
         while os.path.exists(chapter_path.format(chapter_count)):
             file = open(chapter_path.format(chapter_count), "r")
@@ -61,8 +61,8 @@ match thisBook.type:
         print("CHAPTERS COMPLETE                                      ")  # WHITESPACE TO CLEAR LINE
 
         # LOOP THROUGH ALL ADDITIONAL PARTS
-        for file_name in thisBook.additional_files:
-            additional_path = "{}/{}.html".format(thisBook.origin_folder, file_name)
+        for file_name in thisBook.additional_paths:
+            additional_path = "{}/{}.html".format(thisBook.primary_path, file_name)
             if os.path.exists(additional_path):
                 file = open(additional_path, "r")
                 file_soup = BeautifulSoup(file, "html.parser")
@@ -73,7 +73,7 @@ match thisBook.type:
         print("ADDITIONAL COMPLETE                                    ")  # WHITESPACE TO CLEAR LINE
     case "ao3":
         # OPEN FILES
-        file = open(thisBook.main_file + ".html", "r")
+        file = open(thisBook.primary_path + ".html", "r")
         file_soup = BeautifulSoup(file, "html.parser")
 
         htmlManager.clean_ao3(file_soup, thisBook)

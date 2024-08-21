@@ -46,9 +46,9 @@ def clean_libreOffice(file_soup, file_book, count):
     epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
 
     if type(count) is str:
-        part_title = file_book.book_title + " | " + file_book.additional_files[count]["title"]
+        part_title = file_book.title + " | " + file_book.additional_paths[count]["title"]
     else:
-        part_title = file_book.book_title + " | " + file_book.chapter_format.format(count)
+        part_title = file_book.title + " | " + file_book.chapter_title.format(count)
 
     soup = create_base_xhtml(epub_roles, part_title)
 
@@ -58,14 +58,14 @@ def clean_libreOffice(file_soup, file_book, count):
 
     # MANAGE STYLING ---------------------------------------------------------------------------------------------------
     # add dictionary styles
-    for tag_type in file_book.style_dict:
+    for tag_type in file_book.styles:
         # configure tags to be searchable, change style class, clear all attributes.
         for styled_tag in soup.find_all(tag_type):
-            styled_tag["class"] = file_book.style_dict[tag_type]
+            styled_tag["class"] = file_book.styles[tag_type]
 
     # ADD SECTION BREAKS
     # MUST BE HR FOR ACCESSABILITY - ANY IMAGES MUST BE DONE IN CSS AS BACKGROUND IMAGE
-    for linebreak in soup.find_all("p", string=file_book.section_break_symbol):
+    for linebreak in soup.find_all("p", string=file_book.rules["sectionbreak"]):
         # Create hr tag
         linebreak_tag = soup.new_tag("hr")
         # add css file
@@ -95,7 +95,7 @@ def clean_libreOffice(file_soup, file_book, count):
 
     #print(type(count))
     if type(count) is str:
-        soup_to_file(soup, "final/" + file_book.additional_files[count]["final_name"] + ".xhtml")
+        soup_to_file(soup, "final/" + file_book.additional_paths[count]["final_name"] + ".xhtml")
     else:
         soup_to_file(soup, "final/" + str(count) + "-chapter.xhtml")
 
@@ -196,7 +196,7 @@ def build_preface(file_soup, format_type):
             soup.dl.append(tag)
         if tag.name == "dd":  # If description element description
             for a in tag.find_all("a"):
-                old_tag = a.replace_with(set_link(a))  # Check all links in dd
+                a.replace_with(set_link(a))  # Check all links in dd
             soup.dl.append(tag)
 
     # SUMMARY AND NOTES ----------------------------------------------------------------------------------
@@ -222,7 +222,7 @@ def build_oneshot(file_soup, format_type):
 
     A 'oneshot' is a fic with only a single chapter. As such it does not need chapter notes (either beginning or end).
 
-    :param BeautifulSoup file_soup: The specific <div class="chapter"> part of the soup
+    :param Tag file_soup: The specific <div class="chapter"> part of the soup
     :param str format_type: NOT IMPLEMENTED
     :return: BeautifulSoup
     """
@@ -254,7 +254,7 @@ def build_chapter(file_soup, format_type):
 
     If valid endnotes can be found - include them
 
-    :param BeautifulSoup file_soup: The specific <div class="chapter"> part of the soup
+    :param Tag file_soup: The specific <div class="chapter"> part of the soup
     :param str format_type: NOT IMPLEMENTED
     :return: BeautifulSoup | None
     """
@@ -301,7 +301,7 @@ def build_afterword(file_soup, format_type):
     """
     Builds the afterword into a separate file from an ao3 soup.
 
-    :param BeautifulSoup file_soup: The soup of just the afterword text
+    :param Tag file_soup: The soup of just the afterword text
     :param str format_type: NOT IMPLEMENTED
     :return: BeautifulSoup
     """
@@ -406,8 +406,8 @@ def create_summary(title, summary_text, summary_div):
     Edits soup in place
 
     :param str title: The title of the summary
-    :param BeautifulSoup summary_text: The original summary text from file
-    :param BeautifulSoup summary_div: The new location for the summary
+    :param Tag summary_text: The original summary text from file
+    :param Tag summary_div: The new location for the summary
     :return: Void
     """
     soup = BeautifulSoup("", "html.parser")  # Create a soup

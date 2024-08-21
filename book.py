@@ -24,29 +24,7 @@ class Book:
     """
     Class to contain information about the book being processed.
     """
-    # CLASS VARIABLES --------------------------------------------------------------------------------------------------
-    # Technically not needed at the start for python, but easier to see here
-    #file_types: dict = {
-    #    FileType.LIBREOFFICE: "LibreOffice"
-    #}
-
-    origin_folder = ".." #The origin folder with all the chapter files
-    chapter_file_name = "Chapter {}" #The naming convention of the chapter files
-    #Dictionary of any additional chapter files that do not fit the standard chapter conventions in chapter_name
-    #format: {file name: final file name}
-    #folders are the same as defined of chapter_path and final_path
-    additional_files =  {} #Dictionary of any additional files and their details
-
-    book_title = "" #The title of the book, String
-    chapter_format = "{}" #The format of the chapter numbering, String
-
-    section_break_symbol = "###" #The value of the section break to be replaced, String
-    need_section_break_replace = False #If a section break scan is needed, Bool
-
-    style_dict = {} #All style replacements, Dictionary
-    need_styling = False #Whether there is a need for styling
-
-    # CONSTRUCTORS ############################################################################
+    # CONSTRUCTORS #####################################################################################################
     def __init__(self, file_version, json_file):
         """
         The init function.
@@ -55,17 +33,27 @@ class Book:
         :param file json_file: The JSON file to parse
         """
         self.version: int = file_version  # The version in order to check for compatibility issues
-        self.type: str = None  # Where the html files where generated, LibreOffice as default
+        self.type: str | None = None  # Where the html files where generated, LibreOffice as default
+
+        self.primary_path: str | None = None  # The main path of the book,
+        # LibreOffice - main folder, ao3 - single file
+        self.additional_paths: dict = {}  # A dict of any additional paths
+        self.file_name: str | None = None  # The file naming convention for numbered parts
+
+        self.title: str | None = None  # The title of the book
+        self.chapter_title: str | None = None  # The title of the chapters. Will be formatted
 
         self.rules: dict = {}  # A dictionary with all the specific rules for each book. AKA no_links and such
+        self.styles: dict = {}  # All style replacements
 
         try:
             self.read_format(json_file)  # Get information from JSON file
         except KeyError as error:
             print("The provided JSON file is missing the value: " + str(error))
             exit()
-        except:
+        except Exception as error:
             print("There is an error with the JSON file provided.")
+            print("Error: " + str(error))
             exit()
 
     def read_format(self, file):
@@ -85,7 +73,7 @@ class Book:
 
         # BUILD BOOK FORMAT --------------------------------------------------------------------------------------------
         # FILE TYPE
-        if "file_type" in format_dict and format_dict["file_type"] in FileType:
+        if format_dict["file_type"] in FileType:
             # If there is a file_type in file AND if it is a valid (found in enum)
             self.type = format_dict["file_type"]
         else:
@@ -95,11 +83,12 @@ class Book:
         # GET FILE PATHS
         match self.type:
             case FileType.LIBREOFFICE:
-                self.origin_folder = format_dict["origin_folder"]
-                self.chapter_file_name = format_dict["chapter_files"]
-                self.additional_files = format_dict["additional_files"]
+                self.primary_path = format_dict["origin_folder"]
+                self.additional_paths = format_dict["additional_files"]
+
+                self.file_name = format_dict["chapter_files"]
             case FileType.AO3:
-                self.main_file = format_dict["main_file"]
+                self.primary_path = format_dict["main_file"]
 
                 # AO3 RULES
                 self.rules["oneshot"] = format_dict["oneshot"]
@@ -108,37 +97,33 @@ class Book:
                 pass
 
         # BASIC INFO ---------------------------------------------------------------------------
-        self.book_title = format_dict["title"]
-        self.chapter_format = format_dict["chapter_format"]
+        self.title = format_dict["title"]
+        self.chapter_title = format_dict["chapter_format"]
 
-        #SECTION BREAK -------------------------------------------------------------------------
+        # SECTION BREAK -------------------------------------------------------------------------
         if "sectionbreak_symbol" in format_dict:
-            self.section_break_symbol = format_dict["sectionbreak_symbol"]
-            self.need_section_break_replace = True
+            self.rules["sectionbreak"] = format_dict["sectionbreak_symbol"]
 
-        #STYLES --------------------------------------------------------------------------------
+        # STYLES --------------------------------------------------------------------------------
         if "style_rules" in format_dict:
-            self.style_dict = format_dict["style_rules"]
-            self.need_styling = True
+            self.styles = format_dict["style_rules"]
     
         return self
 
-    #TODO: Move format_reader to constructor
     # PYTHON CLASS METHODS ####################################################################
+    # TODO: UPDATE METHOD
     def __str__(self):
         output = "Book File:\n"
         output += "\tVersion: " + str(self.version) + "\n" 
         output += "\tType: " + self.type + "\n\n" 
-        output += "\tOrigin Folder: " + self.origin_folder + "\n"
-        output += "\tChapter File Name: " + self.chapter_file_name + "\n"
-        output += "\tAdditional Files: " + str(self.additional_files) + "\n"
-        output += "\tBook Title: " + self.book_title + "\n" 
-        output += "\tChapter Format: " + self.chapter_format + "\n" 
+        output += "\tPrimary Path: " + self.primary_path + "\n"
+        output += "\tChapter File Name: " + self.file_name + "\n"
+        output += "\tAdditional Files: " + str(self.additional_paths) + "\n"
+        output += "\tBook Title: " + self.title + "\n"
+        output += "\tChapter Format: " + self.chapter_title + "\n"
         output += "\tSection Break:\n"
-        output += "\t\tSymbol: " + self.section_break_symbol + "\n"
-        output += "\t\tScan?: " + str(self.need_section_break_replace) + "\n"
+        output += "\t\tSymbol: " + self.rules["sectionbreak"] + "\n"
         output += "\tStyles:\n"
-        output += "\t\t" + str(self.style_dict) + "\n"
-        output += "\t\tAdd Styles?: " + str(self.need_styling) + "\n"
+        output += "\t\t" + str(self.styles) + "\n"
 
         return output
