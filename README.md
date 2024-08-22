@@ -232,7 +232,13 @@ The ao3 file_type defines a JSON that describes html that make up a series. This
 
 # USAGE
 
+Run HTML Clean from the command line with:
 
+    python3 ebookClean.py {format}
+
+With `{format}` being replaced with a json file in the `/format` directory. Exclude the `.json` extension.  
+
+E.g. `python3 ebookClean.py example-lo`
 
 # ROADMAP
 
