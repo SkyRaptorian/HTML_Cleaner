@@ -1,16 +1,11 @@
 {
     "version": 0,
     "file_type": "ao3",
+    "title": "AO3 Example",
 
-    "main_file": "test-2",
+    "main_file": "test/test-2",
     "oneshot": true,
     "no-links": true,
-    
-    "title": "Test",
-    "chapter_format": "Chapter {}",
 
-    "style_rules": {
-        "h1": "chapHeading",
-        "body": "chapter"
-    }
+    "chapter_format": "Chapter {}"
 }
