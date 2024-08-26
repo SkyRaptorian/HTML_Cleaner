@@ -6,7 +6,7 @@ Functions to clean the html and save the soup to file.
 """
 
 # IMPORTS ##############################################################################################################
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 from bs4 import Comment
 
 from book import Book
@@ -64,7 +64,7 @@ def clean_libreOffice(file_soup, file_book, count):
             styled_tag["class"] = file_book.styles[tag_type]
 
     # ADD SECTION BREAKS
-    # MUST BE HR FOR ACCESSABILITY - ANY IMAGES MUST BE DONE IN CSS AS BACKGROUND IMAGE
+    # MUST BE HR FOR ACCESSIBILITY - ANY IMAGES MUST BE DONE IN CSS AS BACKGROUND IMAGE
     for linebreak in soup.find_all("p", string=file_book.rules["sectionbreak"]):
         # Create hr tag
         linebreak_tag = soup.new_tag("hr")
@@ -77,23 +77,15 @@ def clean_libreOffice(file_soup, file_book, count):
     # REMOVE JUNK TO SIMPLIFY -------------------------------------------------------------------
     # LibreOffice adds these tags for small things that don't always make sense. Especially with
     # cut and paste. Add manually after cleaning if specific effect needed.
-    for data in soup.find_all("font"):
-        data.unwrap()
-
-    for data in soup.find_all("span"):
-        data.unwrap()
-
-    for data in soup.find_all(string="&nbsp;"):
-        data.decompose()
+    final_clean(soup)
 
     # ADDITIONAL ADJUSTMENTS --------------------------------------------------------------------
     # Add other things here - POV image adjustments
-    for l in soup.find_all("pre"):
-        comment = Comment(l.string)
+    for tag in soup.find_all("pre"):
+        comment = Comment(tag.string)
 
-        l.replace_with(comment)
+        tag.replace_with(comment)
 
-    #print(type(count))
     if type(count) is str:
         soup_to_file(soup, "final/" + file_book.additional_paths[count]["final_name"] + ".xhtml")
     else:
@@ -117,6 +109,9 @@ def clean_ao3(main_soup, file_book):
 
     # CREATE FOREWORD/PREFACE
     soup = build_preface(main_soup, "ao3")
+
+    final_clean(soup)
+
     soup_to_file(soup, "final/" + str(part_count) + "-preface.xhtml")
     part_count += 1
 
@@ -125,6 +120,8 @@ def clean_ao3(main_soup, file_book):
         # ONESHOT ONLY HAS ONE CHAPTER
         chapter_contents = main_soup.find("div", id="chapters").find("div", class_="userstuff")  # Get Text
         soup = build_oneshot(chapter_contents, "ao3")
+
+        final_clean(soup)
 
         soup_to_file(soup, "final/" + str(part_count) + "-chapter.xhtml")
         part_count += 1
@@ -138,6 +135,8 @@ def clean_ao3(main_soup, file_book):
             if not soup:
                 continue
 
+            final_clean(soup)
+
             soup_to_file(soup, "final/" + str(part_count) + "-chapter.xhtml")
             part_count += 1
 
@@ -145,7 +144,10 @@ def clean_ao3(main_soup, file_book):
     afterword_search = main_soup.find("div", id="afterword").find("div", id="endnotes")  # Look for a valid afterword
     if afterword_search:  # If there is an afterword
         soup = build_afterword(afterword_search, "ao3")
+        final_clean(soup)
+
         soup_to_file(soup, "final/" + str(part_count) + "-afterword.xhtml")
+
 
 
 # FILE PART MANAGEMENT FUNCTIONS #######################################################################################
@@ -293,7 +295,7 @@ def build_chapter(file_soup, format_type):
         create_summary("Chapter End Notes", end_note.find("blockquote"), soup.find("div", class_="endnotes"))
 
     #ENSURE SOUP IS VALID
-    remove_dissallowed_atrributes(soup)
+    remove_dissallowed_attributes(soup)
     return soup
 
 
@@ -418,7 +420,21 @@ def create_summary(title, summary_text, summary_div):
     summary_div.blockquote.unwrap()  # Remove blockquote
 
 
-def remove_dissallowed_atrributes(soup):
+def final_clean(soup):
+    """
+    Do a final clean of the soup to remove any quirks
+
+    :param BeautifulSoup soup: The soup being clean
+    """
+    clear_span(soup)
+    clear_font(soup)
+
+    clear_lone_nbsp(soup)
+
+    remove_dissallowed_attributes(soup)
+
+
+def remove_dissallowed_attributes(soup):
     """
     Removes any tags or attributes that are not valid for an epub.
 
@@ -430,4 +446,45 @@ def remove_dissallowed_atrributes(soup):
     # ALIGN ATTRIBUTE
     attr_search = soup.find_all(align=True)
     for tag in attr_search:
-        del tag["align"]  #Remove align tag
+        del tag["align"]  # Remove align tag
+    # CENTER TAG
+    for data in soup.find_all("center"):
+        data.unwrap()
+        if not type(data) is NavigableString:
+            # Check if there is a tag to manage
+            if "class" not in data:  # check to prevent overwriting of existing classes
+                data["class"] = "center"
+            else:
+                temp = data["class"]
+                data["class"] = temp + " center"
+
+
+def clear_span(soup):
+    """
+    A function to remove all span tags from a given soup
+
+    :param BeautifulSoup soup: The soup to scan for <span>
+    """
+    for data in soup.find_all("span"):
+        if "class" not in data:  # If there is a class in the span ignore
+            data.unwrap()
+
+
+def clear_font(soup):
+    """
+    A function to remove all font tags from a given soup
+
+    :param BeautifulSoup soup: The soup to scan for <font>
+    """
+    for data in soup.find_all("font"):
+        data.unwrap()
+
+
+def clear_lone_nbsp(soup):
+    """
+    Clear any nbsp that has been left on their own.
+
+    :param BeautifulSoup soup: The soup to scan through
+    """
+    for data in soup.find_all(string="&nbsp;"):
+        data.decompose()
