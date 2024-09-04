@@ -157,7 +157,7 @@ class BookPart:
         
         Will be assembled by the save to file function.
         
-            * heading-text: The text that makes up a part heading. Only the string, no tags.
+            * heading-text: The heading tag and contents
         
             * byline: Any byline or subheadings that make up a file
         

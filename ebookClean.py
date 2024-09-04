@@ -93,13 +93,11 @@ for element in all_parts:
     part = all_parts[element]
 
     if part.part_soups["heading-text"]:
-        title_text = thisBook.title + " | " + part.part_soups["heading-text"]
+        title_text = thisBook.title + " | " + part.part_soups["heading-text"].string
 
         soup = htmlManager.create_base_xhtml(epub_roles, title_text)
 
-        new_tag = soup.new_tag("h1")
-        new_tag.string = part.part_soups["heading-text"]
-        soup.section.append(new_tag)
+        soup.section.append(part.part_soups["heading-text"])
     else:
         soup = htmlManager.create_base_xhtml(epub_roles, thisBook.title)
         # If no heading text provided then just book title

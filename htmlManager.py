@@ -55,7 +55,6 @@ def clean_libreOffice(file_soup, file_book, count) -> BookPart:
         part_title = file_book.title + " | " + file_book.chapter_title.format(count)
         chapter.part_soups["heading-text"] = file_book.chapter_title.format(count)
 
-    #soup = create_base_xhtml(epub_roles, part_title)
     soup = BeautifulSoup("", "html.parser")
 
     # GET PART TEXT ----------------------------------------------------------------------------------------------------
@@ -63,8 +62,9 @@ def clean_libreOffice(file_soup, file_book, count) -> BookPart:
     soup.body.unwrap()  # Remove additional body tag
 
     # GET AND REMOVE HEADINGS
-    chapter.part_soups["heading-text"] = soup.h1.string
-    soup.h1.decompose()
+    heading_text = BeautifulSoup("", "html.parser")
+    heading_text.append(soup.h1)  # Append removes the h1 from the soup
+    chapter.part_soups["heading-text"] = heading_text
 
     # MANAGE STYLING ---------------------------------------------------------------------------------------------------
     # add dictionary styles
