@@ -9,7 +9,8 @@ Functions to clean the html and save the soup to file.
 from bs4 import BeautifulSoup, NavigableString
 from bs4 import Comment
 
-from book import Book
+from book import Format, BookPart
+
 # GLOBAL VARIABLES #####################################################################################################
 # Namespace dictionary, Manages all namespaces for consistency
 namespace_dict = {
@@ -18,13 +19,13 @@ namespace_dict = {
 }
 
 # Global book value for the module - None when nothing is provided
-format_book: Book | None = None
+format_book: Format | None = None
 
 
 # BOOK FORMAT LOGIC ####################################################################################################
 ########################################################################################################################
 
-def clean_libreOffice(file_soup, file_book, count):
+def clean_libreOffice(file_soup, file_book, count) -> BookPart:
     """
     The method to create valid xhtml from a provided soup generated from LibreOffice html
 
@@ -33,22 +34,26 @@ def clean_libreOffice(file_soup, file_book, count):
         * If str, additional file
 
     :param BeautifulSoup file_soup: The soup generated from the html file
-    :param Book file_book: The book details object
+    :param Format file_book: The book details object
     :param int|str count: The chapter number or the name of the additional file
 
-    :return: Void
+    :return: A BookPart and a name that contains all information about the parsed file
     """
     # SET GLOBAL BOOK
     global format_book
     format_book = file_book
+
+    chapter = BookPart(format_book.type)  # Create new book part with type
 
     # INITIAL HTML SET UP ----------------------------------------------------------------------------------------------
     epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
 
     if type(count) is str:
         part_title = file_book.title + " | " + file_book.additional_paths[count]["title"]
+        chapter.part_soups["heading-text"] = file_book.additional_paths[count]["title"]
     else:
         part_title = file_book.title + " | " + file_book.chapter_title.format(count)
+        chapter.part_soups["heading-text"] = file_book.chapter_title.format(count)
 
     soup = create_base_xhtml(epub_roles, part_title)
 
@@ -91,13 +96,18 @@ def clean_libreOffice(file_soup, file_book, count):
     else:
         soup_to_file(soup, "final/" + str(count) + "-chapter.xhtml")
 
+    chapter.part_soups["main-text"] = soup.body.section  # Add the full chapter text to the part
+    chapter.part_soups["main-text"].section.unwrap()
+
+    return chapter
+
 
 def clean_ao3(main_soup, file_book):
     """
     A function to clean a generated html file from Archive of Our Own (https://archiveofourown.org/)
 
     :param BeautifulSoup main_soup: The soup made from the generated html.
-    :param Book file_book: The book details object
+    :param Format file_book: The book details object
     :return: Void
     """
     # SET GLOBAL BOOK

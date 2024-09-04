@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 
 # Custom classes
 import htmlManager
-from book import Book
+from book import Format
 
 import os.path
 
@@ -31,15 +31,17 @@ format_name = cmd_args.format  # NAME OF THE FORMAT TO BE USED
 format_path = "format/{}.json".format(format_name)
 
 # PROGRAM SET UP #######################################################################################################
-
 # FORMAT SETUP ---------------------------------------------------------------------------------------------------------
 if os.path.exists(format_path):  # Check if the book format file exists
     format_file = open(format_path, 'r')
-    thisBook = Book(0, format_file)
+    thisBook = Format(0, format_file)
     format_file.close()
 else:  # NO FORMAT FOUND - EXIT
     print("Error: Format does not exist")
     exit()
+
+# CREATE BOOK PART ARRAY
+all_parts = []
 
 # PROGRAM LOGIC ########################################################################################################
 # MANAGE TYPE OF FORMAT ------------------------------------------------------------------------------------------------
@@ -53,7 +55,7 @@ match thisBook.type:
             file = open(chapter_path.format(chapter_count), "r")
             file_soup = BeautifulSoup(file, "html.parser")
 
-            htmlManager.clean_libreOffice(file_soup, thisBook, chapter_count)
+            all_parts[chapter_count] = htmlManager.clean_libreOffice(file_soup, thisBook, chapter_count)
 
             file.close()
 
@@ -67,7 +69,7 @@ match thisBook.type:
                 file = open(additional_path, "r")
                 file_soup = BeautifulSoup(file, "html.parser")
 
-                htmlManager.clean_libreOffice(file_soup, thisBook, file_name)
+                all_parts[file_name] = htmlManager.clean_libreOffice(file_soup, thisBook, file_name)
 
                 file.close()
         print("ADDITIONAL COMPLETE                                    ")  # WHITESPACE TO CLEAR LINE
@@ -81,6 +83,11 @@ match thisBook.type:
         file.close()
     case "series":
         pass
+
+
+# PRINT PART CHECK
+
+
 
 # PRINT SHOW END OF PROJECT - WHITESPACE TO CLEAR PREVIOUS LETTERS
 print("ALL COMPLETE                                   ")

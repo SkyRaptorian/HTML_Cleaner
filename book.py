@@ -1,5 +1,5 @@
 """
-Manages all information about processed book including file paths and formatting rules
+Contains data classes that manage information about the processed books
 """
 
 # IMPORTS ##############################################################################################################
@@ -19,10 +19,10 @@ class FileType(str, enum.Enum):
     SERIES = "Series"
 
 
-# MAIN CLASS ###########################################################################################################
-class Book:
+# FORMAT CLASS #########################################################################################################
+class Format:
     """
-    Class to contain information about the book being processed.
+    Class that manages all format data about a book.
     """
     # CONSTRUCTORS #####################################################################################################
     def __init__(self, file_version, json_file):
@@ -32,19 +32,28 @@ class Book:
         :param int file_version: A file version to compare against
         :param file json_file: The JSON file to parse
         """
-        self.version: int = file_version  # The version in order to check for compatibility issues
-        self.type: str | None = None  # Where the html files where generated, LibreOffice as default
 
-        self.primary_path: str | None = None  # The main path of the book,
-        # LibreOffice - main folder, ao3 - single file
-        self.additional_paths: dict = {}  # A dict of any additional paths
-        self.file_name: str | None = None  # The file naming convention for numbered parts
+        self.version: int = file_version
+        """The version in order to check for compatibility issues"""
+        self.type: str | None = None
+        """What type of parser is needed."""
 
-        self.title: str | None = None  # The title of the book
-        self.chapter_title: str | None = None  # The title of the chapters. Will be formatted
+        self.primary_path: str | None = None
+        """The primary file path to operate on. LibreOffice - main folder, ao3 - single file"""
+        self.additional_paths: dict = {}
+        """Dictionary of any additional path"""
+        self.file_name: str | None = None
+        """The string format for the file names. e.g. 'Chapter {}'"""
 
-        self.rules: dict = {}  # A dictionary with all the specific rules for each book. AKA no_links and such
-        self.styles: dict = {}  # All style replacements
+        self.title: str | None = None
+        """The title of the book"""
+        self.chapter_title: str | None = None
+        """The title of the chapters. Will be formatted"""
+
+        self.rules: dict = {}
+        """A dictionary with all the specific rules for each book. AKA no_links and such"""
+        self.styles: dict = {}
+        """All style replacements"""
 
         try:
             self.read_format(json_file)  # Get information from JSON file
@@ -111,19 +120,53 @@ class Book:
         return self
 
     # PYTHON CLASS METHODS ####################################################################
-    # TODO: UPDATE METHOD
     def __str__(self):
         output = "Book File:\n"
         output += "\tVersion: " + str(self.version) + "\n" 
-        output += "\tType: " + self.type + "\n\n" 
+        output += "\tType: " + self.type + "\n"
+        output += "\tBook Title: " + self.title + "\n\n"
         output += "\tPrimary Path: " + self.primary_path + "\n"
         output += "\tChapter File Name: " + self.file_name + "\n"
         output += "\tAdditional Files: " + str(self.additional_paths) + "\n"
-        output += "\tBook Title: " + self.title + "\n"
-        output += "\tChapter Format: " + self.chapter_title + "\n"
-        output += "\tSection Break:\n"
-        output += "\t\tSymbol: " + self.rules["sectionbreak"] + "\n"
+        output += "\tRules:\n"
+        output += "\t\t" + str(self.rules) + "\n"
         output += "\tStyles:\n"
         output += "\t\t" + str(self.styles) + "\n"
 
         return output
+
+
+class BookPart:
+    """
+    Class that contains all the separate parts of a chapter to be sorted and assembled later.
+    """
+    def __init__(self, file_type: str):
+        self.file_type: str = file_type
+        """The type of file that the part comes from"""
+
+        self.part_type: str = ""
+        """The type of part for accessibility tags, e.g. chapter, preface"""
+
+        self.path:str = ""
+        """The final path that the file will be saved under"""
+
+        self.part_soups: dict = {}
+        """
+        A dictionary that contains all separate soups that make up the different parts. Exclude section tags or large 
+        wraps as they will be added in assembly.
+        
+        Will be assembled by the save to file function.
+        
+            * heading-text: The text that makes up a part heading. Only the string, no tags.
+        
+            * byline: Any byline or subheadings that make up a file
+        
+            * meta: Used in ao3 parsing to hold tag block
+            
+            * summary: Chapter summary or epitaph, in ao3 parsing can include chapter notes
+            
+            * end-notes: Any end notes of the chapter
+        
+            * main-text: The main text of the file/chapter 
+        """
+
