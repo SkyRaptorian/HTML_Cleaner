@@ -85,7 +85,7 @@ match thisBook.type:
         pass
 
 
-file_name = "final/test/part-{}"
+file_name = "final/part-{}"
 epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
 
 # PRINT PART CHECK
