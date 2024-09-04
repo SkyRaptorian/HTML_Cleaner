@@ -41,7 +41,7 @@ else:  # NO FORMAT FOUND - EXIT
     exit()
 
 # CREATE BOOK PART ARRAY
-all_parts = []
+all_parts: dict = {}
 
 # PROGRAM LOGIC ########################################################################################################
 # MANAGE TYPE OF FORMAT ------------------------------------------------------------------------------------------------
@@ -85,9 +85,30 @@ match thisBook.type:
         pass
 
 
+file_name = "final/test/part-{}"
+epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
+
 # PRINT PART CHECK
+for element in all_parts:
+    part = all_parts[element]
 
+    if part.part_soups["heading-text"]:
+        title_text = thisBook.title + " | " + part.part_soups["heading-text"]
 
+        soup = htmlManager.create_base_xhtml(epub_roles, title_text)
+
+        new_tag = soup.new_tag("h1")
+        new_tag.string = part.part_soups["heading-text"]
+        soup.section.append(new_tag)
+    else:
+        soup = htmlManager.create_base_xhtml(epub_roles, thisBook.title)
+        # If no heading text provided then just book title
+
+    if part.part_soups["main-text"]:
+        main_text = part.part_soups["main-text"]
+        soup.section.append(main_text)
+
+    htmlManager.soup_to_file(soup, file_name.format(element))
 
 # PRINT SHOW END OF PROJECT - WHITESPACE TO CLEAR PREVIOUS LETTERS
 print("ALL COMPLETE                                   ")

@@ -86,18 +86,22 @@ def clean_libreOffice(file_soup, file_book, count) -> BookPart:
 
     # ADDITIONAL ADJUSTMENTS --------------------------------------------------------------------
     # Add other things here - POV image adjustments
-    for tag in soup.find_all("pre"):
-        comment = Comment(tag.string)
+    #for tag in soup.find_all("pre"):
+        #comment = Comment(tag.string)
 
-        tag.replace_with(comment)
+        #tag.replace_with(comment)
 
     if type(count) is str:
         soup_to_file(soup, "final/" + file_book.additional_paths[count]["final_name"] + ".xhtml")
     else:
         soup_to_file(soup, "final/" + str(count) + "-chapter.xhtml")
 
-    chapter.part_soups["main-text"] = soup.body.section  # Add the full chapter text to the part
-    chapter.part_soups["main-text"].section.unwrap()
+    new_soup = BeautifulSoup("", "html.parser")
+    new_soup.append(soup.section)
+    new_soup.section.unwrap()
+    chapter.part_soups["heading-text"] = new_soup.h1.string
+    new_soup.h1.decompose()  # Remove extra
+    chapter.part_soups["main-text"] = new_soup  # Add the full chapter text to the part
 
     return chapter
 
