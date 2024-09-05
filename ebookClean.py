@@ -78,7 +78,7 @@ match thisBook.type:
         file = open(thisBook.primary_path + ".html", "r")
         file_soup = BeautifulSoup(file, "html.parser")
 
-        htmlManager.clean_ao3(file_soup, thisBook)
+        all_parts = htmlManager.clean_ao3(file_soup, thisBook)
 
         file.close()
     case "series":
@@ -91,8 +91,9 @@ epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
 # PRINT PART CHECK
 for element in all_parts:
     part = all_parts[element]
+    #print(part.part_soups)
 
-    if part.part_soups["heading"]:
+    if "heading" in part.part_soups:
         title_text = thisBook.title + " | " + part.part_soups["heading"].string
 
         soup = htmlManager.create_base_xhtml(epub_roles, title_text)
@@ -102,9 +103,31 @@ for element in all_parts:
         soup = htmlManager.create_base_xhtml(epub_roles, thisBook.title)
         # If no heading text provided then just book title
 
-    if part.part_soups["main-text"]:
+    if "byline" in part.part_soups:
+        soup.section.append(part.part_soups["byline"])
+
+    if "meta" in part.part_soups:
+        soup.section.append(soup.new_tag("div", attrs={"class": "work-tags"}))
+        soup.section.div.append(soup.new_tag("dl"))
+        for tag_category in part.part_soups["meta"]:
+            if not tag_category.string == "Collections:":
+                soup.dl.append(tag_category)
+                soup.dl.append(part.part_soups["meta"][tag_category])
+
+    if "summary" in part.part_soups:
+        soup.section.append(soup.new_tag("div", attrs={"class": "summary"}))
+        htmlManager.create_summary("Summary", part.part_soups["summary"], soup.find("div", class_="summary"))
+
+    if "start-notes" in part.part_soups:
+        soup.section.append(soup.new_tag("div", attrs={"class": "notes"}))
+        htmlManager.create_summary("Notes", part.part_soups["start-notes"], soup.find("div", class_="notes"))
+
+    if "main-text" in part.part_soups:
         main_text = part.part_soups["main-text"]
         soup.section.append(main_text)
+
+    if "end-notes" in part.part_soups:
+        pass
 
     htmlManager.soup_to_file(soup, file_name.format(element))
 

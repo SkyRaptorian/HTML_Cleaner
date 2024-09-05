@@ -100,7 +100,7 @@ def clean_ao3(main_soup, file_book):
 
     :param BeautifulSoup main_soup: The soup made from the generated html.
     :param Format file_book: The book details object
-    :return: Void
+    :return: dict - A dictionary of all parts to save
     """
     # SET GLOBAL BOOK
     global format_book
@@ -108,13 +108,9 @@ def clean_ao3(main_soup, file_book):
 
     # CREATE FILES -----------------------------------------------------------------------------------------------------
     part_count = 0  # counter for the chapter - used for naming files
+    parts: dict = {"preface": build_preface(main_soup, "ao3")}
 
     # CREATE FOREWORD/PREFACE
-    soup = build_preface(main_soup, "ao3")
-
-    final_clean(soup)
-
-    soup_to_file(soup, "final/" + str(part_count) + "-preface.xhtml")
     part_count += 1
 
     # CHAPTERS ---------------------------------------------------------------------------------------------------------
@@ -150,6 +146,7 @@ def clean_ao3(main_soup, file_book):
 
         soup_to_file(soup, "final/" + str(part_count) + "-afterword.xhtml")
 
+    return parts
 
 
 # FILE PART MANAGEMENT FUNCTIONS #######################################################################################
@@ -165,59 +162,53 @@ def build_preface(file_soup, format_type):
     :return: BeautifulSoup
     """
     # BUILD SKELETON FILE ----------------------------------------------------------------------------------------------
-    epub_roles = {"epub:type": "preface", "role": "doc-preface"}
-    soup = create_base_xhtml(epub_roles, "Preface")  # Basic File
-
-    soup.section.append(soup.new_tag("h1", attrs={"class": "title"}))  # Heading
-    soup.section.append(soup.new_tag("p", attrs={"class": "byline"}))  # Author byline
-    soup.section.append(soup.new_tag("p", attrs={"class": "link"}))  # Archive of Our Own link
-
-    soup.section.append(soup.new_tag("div", attrs={"class": "work-tags"}))  # Div for work tags
-    soup.div.append(soup.new_tag("dl"))  # Start description list
-
-    soup.section.append(soup.new_tag("div", attrs={"class": "summary"}))  # Div for work summary
+    part = BookPart(format_type)
+    part.part_type = "PREFACE"
 
     # ENTER BASIC DETAILS ----------------------------------------------------------------------------------------------
-    # HEADING
-    soup.h1.string = file_soup.find("h1").string
+    part.part_soups["heading"] = file_soup.h1
 
-    # AUTHOR
-    soup.find("p", class_="byline").string = "by "  # Start string
-    soup.find("p", class_="byline").append(
-        set_link(file_soup.find("div", class_="byline").a))  # Append author name to byline after checking links
+    # BYLINE
+    byline = BeautifulSoup("<p class='byline'></p>", "html.parser")
+    byline.p.string = "by "  # GET AUTHOR
+    byline.p.append(set_link(file_soup.find("div", class_="byline").a))
 
-    # WORK LINK
-    work_link = file_soup.find("p", class_="message").find_all("a")
-    soup.find("p", class_="link").string = "Posted originally on the "  # Start the link line
-    soup.find("p", class_="link").append(set_link(work_link[0]))  # Add first link - Archive of Our Own
-    soup.find("p", class_="link").append(" at ")  # bridge links
-    soup.find("p", class_="link").append(set_link(work_link[1]))  # Add specific work link
-    soup.find("p", class_="link").append(".")  # end line
+    byline.p.append(byline.new_tag("br"))
+
+    work_link = file_soup.find("p", class_="message").find_all("a")  # Get links in message
+    # The links of interest are the first two.
+    byline.p.append("Posted originally on the ")
+    byline.p.append(set_link(work_link[0]))  # Expected link tag: <a>Archive of Our Own</a>
+    byline.p.append(" at ")
+    byline.p.append(set_link(work_link[1]))  # Expected link tag: <a>https....</a> (Specific Work Link)
+    byline.p.append(".")
+    # print(byline)
+
+    part.part_soups["byline"] = byline
 
     # TAG LIST ---------------------------------------------------------------------------------------------------------
-    for tag in file_soup.dl:  # Get all description elements
-        if tag.name == "dt":  # If description element title
-            soup.dl.append(tag)
-        if tag.name == "dd":  # If description element description
-            for a in tag.find_all("a"):
-                a.replace_with(set_link(a))  # Check all links in dd
-            soup.dl.append(tag)
+    meta_block: dict = {}
+    for tag in file_soup.dl.find_all("dt"):  # Get all element titles
+        element_title = tag
+        for link in tag.find_next_sibling("dd").find_all("a"):
+            link.replace_with(set_link(link))
+        meta_block[element_title] = tag.find_next_sibling("dd")
+    part.part_soups["meta"] = meta_block
 
     # SUMMARY AND NOTES ----------------------------------------------------------------------------------
     # SUMMARY, ALL WORKS HAVE ONE
     summary_text = (file_soup.find("div", id="preface")
                     .find("p", string="Summary").find_next_sibling())  # Get the summary blocktext
-    create_summary("Summary", summary_text, soup.find("div", class_="summary"))
+    part.part_soups["summary"] = summary_text
 
     # NOTES, NEED TO CHECK FIRST
     notes_text = file_soup.find("div", id="preface").find("p",
                                                           string="Notes").find_next_sibling()  # Get the notes blocktext
 
     if notes_text:  # Check there is a note
-        soup.section.append(soup.new_tag("div", attrs={"class": "notes"}))  # create div for work notes
-        create_summary("Notes", notes_text, soup.find("div", class_="notes"))  # Make the note text
+        part.part_soups["start-notes"] = notes_text
 
-    return soup
+    return part
 
 
 def build_oneshot(file_soup, format_type):

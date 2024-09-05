@@ -163,10 +163,12 @@ class BookPart:
         
             * meta: Used in ao3 parsing to hold tag block
             
-            * summary: Chapter summary or epitaph, in ao3 parsing can include chapter notes
+            * summary: Chapter summary or epigraph - keep as blockquote to assist in unwrap
             
-            * end-notes: Any end notes of the chapter
+            * start-notes: Any start notes of the chapter
         
             * main-text: The main text of the file/chapter 
+            
+            * end-notes: Any end notes of the chapter
         """
 
