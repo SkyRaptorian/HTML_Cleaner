@@ -133,9 +133,9 @@ def clean_ao3(main_soup, file_book):
             if not soup:
                 continue
 
-            final_clean(soup)
 
-            soup_to_file(soup, "final/" + str(part_count) + "-chapter.xhtml")
+            #soup_to_file(soup, "final/" + str(part_count) + "-chapter.xhtml")
+            parts[part_count] = soup
             part_count += 1
 
     # AFTERWORD --------------------------------------------------------------------------------------------------------
@@ -251,45 +251,41 @@ def build_chapter(file_soup, format_type):
 
     :param Tag file_soup: The specific <div class="chapter"> part of the soup
     :param str format_type: NOT IMPLEMENTED
-    :return: BeautifulSoup | None
+    :return: BookPart | None
     """
     # BUILD SKELETON FILE ----------------------------------------------------------------------------------------------
-    epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
-    soup = create_base_xhtml(epub_roles, "Chapter")  #Placeholder title until later search
-    soup.section["class"] = "chapter-text"  #add chapter css class
+    part = BookPart(format_type)
+    part.part_type = "CHAPTER"
 
     # GET CHAPTER NOTES -------------------------------------------------------------------------------------
-    front_note = file_soup.find_previous_sibling("div", class_="meta group")  #Get possible front meta-group
-    end_note = file_soup.find_next_sibling()  #get possible endnote - have to check its an endnote
+    front_note = file_soup.find_previous_sibling("div", class_="meta group")  # Get possible front meta-group
+    end_note = file_soup.find_next_sibling()  # get possible endnote - have to check its an endnote
 
     # START CHAPTER PARSE -----------------------------------------------------------------------------------
     if not front_note:  # If there isn't a front note possible subchapter - ignore
         return None  # Return empty to be able to check if succeed
 
     # CREATE TITLE
-    soup.section.append(soup.new_tag("h1"))  #Create title tag
-    soup.h1.string = front_note.h2.string  #Get titles
-    soup.title.string = front_note.h2.string
+
+    heading = BeautifulSoup("<h1></h1>", "html.parser")
+    heading.h1.append(front_note.h2)
+    heading.h2.unwrap()
+
+    part.part_soups["heading"] = heading
 
     # CHAPTER NOTES
-    if (front_note.find("blockquote")):  #Check if their is a chapter summary/note
-        #Create summary div
-        soup.section.append(soup.new_tag("div", attrs={"class": "summary"}))
-        #GET SUMMARY TEXT
-        create_summary("Chapter Summary", front_note.find("blockquote"), soup.find("div", class_="summary"))
+    if front_note.find("blockquote"):  # Check if there is a chapter summary/note
+        part.part_soups["summary"] = front_note.find("blockquote")
 
     # CHAPTER TEXT
-    file_soup["class"] = "body-text"  #Set css class
-    soup.section.append(file_soup)
+    file_soup["class"] = "body-text"  # Set css class
+    part.part_soups["main-text"] = file_soup
 
     # CHAPTER END NOTES
-    if (not end_note.h2):  #Only front notes have h2 tags, anything else is valid
-        soup.section.append(soup.new_tag("div", attrs={"class": "endnotes"}))
-        create_summary("Chapter End Notes", end_note.find("blockquote"), soup.find("div", class_="endnotes"))
+    if not end_note.h2:  # Only front notes have h2 tags, anything else is valid
+        part.part_soups["end-notes"] = end_note.find("blockquote")
 
-    #ENSURE SOUP IS VALID
-    remove_dissallowed_attributes(soup)
-    return soup
+    return part
 
 
 def build_afterword(file_soup, format_type):

@@ -127,8 +127,11 @@ for element in all_parts:
         soup.section.append(main_text)
 
     if "end-notes" in part.part_soups:
-        pass
+        soup.section.append(soup.new_tag("div", attrs={"class": "endnotes"}))
+        htmlManager.create_summary("Chapter End Notes", part.part_soups["end-notes"], soup.find("div", class_="endnotes"))
 
+    # FINAL PREP
+    htmlManager.final_clean(soup)
     htmlManager.soup_to_file(soup, file_name.format(element))
 
 # PRINT SHOW END OF PROJECT - WHITESPACE TO CLEAR PREVIOUS LETTERS
