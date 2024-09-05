@@ -157,7 +157,7 @@ class BookPart:
         
         Will be assembled by the save to file function.
         
-            * heading-text: The heading tag and contents
+            * heading: The heading tag and contents
         
             * byline: Any byline or subheadings that make up a file
         

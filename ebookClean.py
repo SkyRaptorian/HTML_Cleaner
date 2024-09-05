@@ -92,12 +92,12 @@ epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
 for element in all_parts:
     part = all_parts[element]
 
-    if part.part_soups["heading-text"]:
-        title_text = thisBook.title + " | " + part.part_soups["heading-text"].string
+    if part.part_soups["heading"]:
+        title_text = thisBook.title + " | " + part.part_soups["heading"].string
 
         soup = htmlManager.create_base_xhtml(epub_roles, title_text)
 
-        soup.section.append(part.part_soups["heading-text"])
+        soup.section.append(part.part_soups["heading"])
     else:
         soup = htmlManager.create_base_xhtml(epub_roles, thisBook.title)
         # If no heading text provided then just book title
