@@ -119,10 +119,7 @@ def clean_ao3(main_soup, file_book):
         chapter_contents = main_soup.find("div", id="chapters").find("div", class_="userstuff")  # Get Text
         soup = build_oneshot(chapter_contents, "ao3")
 
-        final_clean(soup)
-
-        soup_to_file(soup, "final/" + str(part_count) + "-chapter.xhtml")
-        part_count += 1
+        parts[part_count] = soup
     else:
         # IF NOT ONESHOT HAS MULTIPLE CHAPTERS
         chapter_contents = main_soup.find("div", id="chapters").find_all("div", class_="userstuff")  # Get Chapters
@@ -133,8 +130,6 @@ def clean_ao3(main_soup, file_book):
             if not soup:
                 continue
 
-
-            #soup_to_file(soup, "final/" + str(part_count) + "-chapter.xhtml")
             parts[part_count] = soup
             part_count += 1
 
@@ -226,6 +221,9 @@ def build_oneshot(file_soup, format_type):
     soup = create_base_xhtml(epub_roles, "Chapter")  # Placeholder title until later search
     soup.section["class"] = "chapter-text"  # add chapter css class
 
+    part = BookPart(format_type)
+    part.part_type = "CHAPTER"
+
     # ADD CONTENT ------------------------------------------------------------------------------------------------------
     # TITLE
     front_note = file_soup.find_previous_sibling()  # Get Title
@@ -233,11 +231,16 @@ def build_oneshot(file_soup, format_type):
     soup.h1.string = front_note.string
     soup.title.string = front_note.string
 
+    heading = BeautifulSoup("<h1></h1>", "html.parser")
+    heading.h1.append(front_note.string)
+
+    part.part_soups["heading"] = heading
+
     # CHAPTER
     file_soup["class"] = "body-text"  # Set css class
-    soup.section.append(file_soup)
+    part.part_soups["main-text"] = file_soup
 
-    return soup
+    return part
 
 
 def build_chapter(file_soup, format_type):
