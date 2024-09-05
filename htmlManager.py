@@ -137,9 +137,8 @@ def clean_ao3(main_soup, file_book):
     afterword_search = main_soup.find("div", id="afterword").find("div", id="endnotes")  # Look for a valid afterword
     if afterword_search:  # If there is an afterword
         soup = build_afterword(afterword_search, "ao3")
-        final_clean(soup)
 
-        soup_to_file(soup, "final/" + str(part_count) + "-afterword.xhtml")
+        parts["afterword"] = soup
 
     return parts
 
@@ -217,9 +216,6 @@ def build_oneshot(file_soup, format_type):
     :return: BeautifulSoup
     """
     # BUILD SKELETON FILE ----------------------------------------------------------------------------------------------
-    epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
-    soup = create_base_xhtml(epub_roles, "Chapter")  # Placeholder title until later search
-    soup.section["class"] = "chapter-text"  # add chapter css class
 
     part = BookPart(format_type)
     part.part_type = "CHAPTER"
@@ -227,9 +223,6 @@ def build_oneshot(file_soup, format_type):
     # ADD CONTENT ------------------------------------------------------------------------------------------------------
     # TITLE
     front_note = file_soup.find_previous_sibling()  # Get Title
-    soup.section.append(soup.new_tag("h1"))
-    soup.h1.string = front_note.string
-    soup.title.string = front_note.string
 
     heading = BeautifulSoup("<h1></h1>", "html.parser")
     heading.h1.append(front_note.string)
@@ -302,11 +295,13 @@ def build_afterword(file_soup, format_type):
     # CREATE BASIC FILES
     epub_roles = {"epub:type": "afterword", "role": "doc-afterword"}
     soup = create_base_xhtml(epub_roles, "Afterword")
-    # ADD CONTENT
-    soup.section.append(soup.new_tag("div", attrs={"class": "notes"}))  # Create a div for notes
-    create_summary("End Notes:", file_soup.blockquote, soup.div)
 
-    return soup
+    part = BookPart(format_type)
+    part.part_type = "AFTERWORD"
+
+    part.part_soups["end-notes"] = file_soup.blockquote
+
+    return part
 
 
 # HELPER FUNCTIONS #####################################################################################################
