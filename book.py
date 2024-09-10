@@ -49,6 +49,8 @@ class Format:
         """The title of the book"""
         self.chapter_title: str | None = None
         """The title of the chapters. Will be formatted"""
+        self.additional_info: dict = {}
+        """Any additional info to be held about the files, mostly used by series"""
 
         self.rules: dict = {}
         """A dictionary with all the specific rules for each book. AKA no_links and such"""
@@ -95,19 +97,36 @@ class Format:
                 self.primary_path = format_dict["origin_folder"]
                 self.additional_paths = format_dict["additional_files"]
 
+                self.chapter_title = format_dict["chapter_format"]
+
                 self.file_name = format_dict["chapter_files"]
             case FileType.AO3:
                 self.primary_path = format_dict["main_file"]
+
+                self.chapter_title = format_dict["chapter_format"]
 
                 # AO3 RULES
                 self.rules["oneshot"] = format_dict["oneshot"]
                 self.rules["no-links"] = format_dict["no-links"]
             case FileType.SERIES:
-                pass
+                self.primary_path = format_dict["origin_folder"]
+                self.additional_paths = format_dict["part_files"]
+
+                self.additional_info["series_begun"] = format_dict["series_begun"]
+                self.additional_info["series_updated"] = format_dict["series_updated"]
+                self.additional_info["series_stats"] = format_dict["series_stats"]
+
+                if not format_dict["series_description"] is None:
+                    self.additional_info["series_description"] = format_dict["series_description"]
+                if not format_dict["series_notes"] is None:
+                    self.additional_info["series_notes"] = format_dict["series_notes"]
+
+                # AO3 RULES
+                self.rules["oneshot"] = format_dict["oneshot"]
+                self.rules["no-links"] = format_dict["no-links"]
 
         # BASIC INFO ---------------------------------------------------------------------------
         self.title = format_dict["title"]
-        self.chapter_title = format_dict["chapter_format"]
 
         # SECTION BREAK -------------------------------------------------------------------------
         if "sectionbreak_symbol" in format_dict:

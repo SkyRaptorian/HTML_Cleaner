@@ -196,9 +196,9 @@ def build_preface(file_soup, format_type):
     part.part_soups["summary"] = summary_text
 
     # NOTES, NEED TO CHECK FIRST
-    notes_text = file_soup.find("div", id="preface").find("p",
-                                                          string="Notes").find_next_sibling()  # Get the notes blocktext
-
+    notes_text = file_soup.find("div", id="preface").find("p", string="Notes")
+    if notes_text:
+        notes_text = notes_text.find_next_sibling()  # Get the notes blocktext
     if notes_text:  # Check there is a note
         part.part_soups["start-notes"] = notes_text
 

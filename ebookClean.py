@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 
 # Custom classes
 import htmlManager
-from book import Format
+from book import Format, BookPart
 
 import os.path
 
@@ -81,58 +81,145 @@ match thisBook.type:
         all_parts = htmlManager.clean_ao3(file_soup, thisBook)
 
         file.close()
-    case "series":
-        pass
+    case "Series":
+        for part in thisBook.additional_paths:
+            part_name = part["name"]
+            file = open(thisBook.primary_path + part_name + ".html", "r")
+            file_soup = BeautifulSoup(file, "html.parser")
+            all_parts[part_name] = htmlManager.clean_ao3(file_soup, thisBook)
+
+            print("CHAPTERS COMPLETE " + part_name + "                                     ")  # WHITESPACE TO CLEAR LINE
+
+            file.close()
 
 
 file_name = "final/part-{}"
 epub_roles = {"epub:type": "chapter", "role": "doc-chapter"}
 
-# PRINT PART CHECK
-for element in all_parts:
-    part = all_parts[element]
-    #print(part.part_soups)
+if not thisBook.type == "Series":
+    # PRINT PART CHECK
+    for element in all_parts:
+        part = all_parts[element]
+        #print(part.part_soups)
 
-    if "heading" in part.part_soups:
-        title_text = thisBook.title + " | " + part.part_soups["heading"].string
+        if "heading" in part.part_soups:
+            title_text = thisBook.title + " | " + part.part_soups["heading"].string
 
-        soup = htmlManager.create_base_xhtml(epub_roles, title_text)
+            soup = htmlManager.create_base_xhtml(epub_roles, title_text)
 
-        soup.section.append(part.part_soups["heading"])
-    else:
-        soup = htmlManager.create_base_xhtml(epub_roles, thisBook.title)
-        # If no heading text provided then just book title
+            soup.section.append(part.part_soups["heading"])
+        else:
+            soup = htmlManager.create_base_xhtml(epub_roles, thisBook.title)
+            # If no heading text provided then just book title
 
-    if "byline" in part.part_soups:
-        soup.section.append(part.part_soups["byline"])
+        if "byline" in part.part_soups:
+            soup.section.append(part.part_soups["byline"])
 
-    if "meta" in part.part_soups:
-        soup.section.append(soup.new_tag("div", attrs={"class": "work-tags"}))
-        soup.section.div.append(soup.new_tag("dl"))
-        for tag_category in part.part_soups["meta"]:
-            if not tag_category.string == "Collections:":
-                soup.dl.append(tag_category)
-                soup.dl.append(part.part_soups["meta"][tag_category])
+        if "meta" in part.part_soups:
+            soup.section.append(soup.new_tag("div", attrs={"class": "work-tags"}))
+            soup.section.div.append(soup.new_tag("dl"))
+            for tag_category in part.part_soups["meta"]:
+                if not tag_category.string == "Collections:":
+                    soup.dl.append(tag_category)
+                    soup.dl.append(part.part_soups["meta"][tag_category])
 
-    if "summary" in part.part_soups:
+        if "summary" in part.part_soups:
+            soup.section.append(soup.new_tag("div", attrs={"class": "summary"}))
+            htmlManager.create_summary("Summary", part.part_soups["summary"], soup.find("div", class_="summary"))
+
+        if "start-notes" in part.part_soups:
+            soup.section.append(soup.new_tag("div", attrs={"class": "notes"}))
+            htmlManager.create_summary("Notes", part.part_soups["start-notes"], soup.find("div", class_="notes"))
+
+        if "main-text" in part.part_soups:
+            main_text = part.part_soups["main-text"]
+            soup.section.append(main_text)
+
+        if "end-notes" in part.part_soups:
+            soup.section.append(soup.new_tag("div", attrs={"class": "endnotes"}))
+            htmlManager.create_summary("Chapter End Notes", part.part_soups["end-notes"], soup.find("div", class_="endnotes"))
+
+        # FINAL PREP
+        htmlManager.final_clean(soup)
+        htmlManager.soup_to_file(soup, file_name.format(element))
+else:
+    print("Is a series")
+    # Series info / title page - read from format
+    soup = htmlManager.create_base_xhtml(epub_roles, thisBook.title)
+
+    soup.section.append(soup.new_tag("h1", attrs={"class": "title"}))
+    soup.h1.string = thisBook.title
+
+    # BYLINE
+
+    soup.section.append(soup.new_tag("div", attrs={"class": "work-tags"}))
+    soup.div.append(soup.new_tag("dl"))
+
+    new_tag = soup.new_tag("dt")
+    new_tag.string = "Series Begun:"
+    soup.dl.append(new_tag)
+
+    new_tag = soup.new_tag("dd")
+    new_tag.string = thisBook.additional_info["series_begun"]
+    soup.dl.append(new_tag)
+
+    new_tag = soup.new_tag("dt")
+    new_tag.string = "Series Updated:"
+    soup.dl.append(new_tag)
+
+    new_tag = soup.new_tag("dd")
+    new_tag.string = thisBook.additional_info["series_updated"]
+    soup.dl.append(new_tag)
+
+    new_tag = soup.new_tag("dt")
+    new_tag.string = "Series Stats:"
+    soup.dl.append(new_tag)
+
+    new_tag = soup.new_tag("dd")
+    new_tag.string = thisBook.additional_info["series_stats"]
+    soup.dl.append(new_tag)
+
+    if "series_description" in thisBook.additional_info:
         soup.section.append(soup.new_tag("div", attrs={"class": "summary"}))
-        htmlManager.create_summary("Summary", part.part_soups["summary"], soup.find("div", class_="summary"))
+        htmlManager.create_summary("", thisBook.additional_info["series_description"])
 
-    if "start-notes" in part.part_soups:
-        soup.section.append(soup.new_tag("div", attrs={"class": "notes"}))
-        htmlManager.create_summary("Notes", part.part_soups["start-notes"], soup.find("div", class_="notes"))
+    htmlManager.soup_to_file(soup, "final/seriesTitle")
 
-    if "main-text" in part.part_soups:
-        main_text = part.part_soups["main-text"]
-        soup.section.append(main_text)
+    # part title
+    part_count = 0
+    for parts in all_parts:
+        part_count += 1
+        chapter_count = 0
+        for part in all_parts[parts]:
+            working_part: BookPart = all_parts[parts][part]
+            if working_part.part_type == "PREFACE":
+                soup = htmlManager.create_base_xhtml(epub_roles, parts + " | Title")
+                soup.section.append(soup.new_tag("h1", attrs={"class": "title"}))
+                soup.h1.string = "Part " + str(part_count)
+                soup.h1.append(soup.new_tag("br"))
+                soup.h1.append(working_part.part_soups["heading"])
+                soup.h1.h1.unwrap()
 
-    if "end-notes" in part.part_soups:
-        soup.section.append(soup.new_tag("div", attrs={"class": "endnotes"}))
-        htmlManager.create_summary("Chapter End Notes", part.part_soups["end-notes"], soup.find("div", class_="endnotes"))
+                soup.section.append(working_part.part_soups["byline"])
 
-    # FINAL PREP
-    htmlManager.final_clean(soup)
-    htmlManager.soup_to_file(soup, file_name.format(element))
+                soup.section.append(soup.new_tag("p", attrs={"class": "summary"}))
+                soup.p.append(working_part.part_soups["summary"])
+                soup.blockquote.unwrap()
+
+                htmlManager.soup_to_file(soup, "final/part" + str(part_count) + "_title")
+            if working_part.part_type == "CHAPTER":
+                chapter_count += 1
+                soup = htmlManager.create_base_xhtml(epub_roles, parts + " | Chapter " + str(chapter_count))
+
+                main_text = working_part.part_soups["main-text"]
+                soup.section.append(main_text)
+
+                htmlManager.soup_to_file(soup, "final/part" + str(part_count) + "_chapter" + str(chapter_count))
+
+            if working_part.part_type == "AFTERWORD":
+                soup = htmlManager.create_base_xhtml(epub_roles, parts + " | Afterword")
+    # part
+    # Appendix
 
 # PRINT SHOW END OF PROJECT - WHITESPACE TO CLEAR PREVIOUS LETTERS
 print("ALL COMPLETE                                   ")
